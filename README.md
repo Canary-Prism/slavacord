@@ -56,7 +56,7 @@ this declares a command `/test` with description "test command" that takes no pa
 
 then you submit the class to the `CommandHandler` to parse its methods into commands, register them with discord, and start listening for events
 ```java
-handler.register(MyCommands.class);
+handler.register(MyCommands.class, true);
 ```
 it's worth noting these command methods may be static *or* virtual (instance methods), however if they are virtual you must pass in an **instance** of your `Commands` class instead of just the `Class` object of it
 ```java
@@ -65,7 +65,7 @@ class InstanceMethods implements Commands {
     @Command(name = "mewo", description = "mewoo :3")
     void mewo() {}
 }
-handler.register(new InstanceMethods());
+handler.register(new InstanceMethods(), true);
 ```
 
 in order to.. actually interact with the api from the command, you can just use the basic Javacord method of obtaining the `SlashCommandInteraction` object given by the event objects  
