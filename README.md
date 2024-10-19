@@ -68,6 +68,8 @@ class InstanceMethods implements Commands {
 handler.register(new InstanceMethods(), true);
 ```
 
+you might have noticed the `true` that's also passed to the `register()` method. that's a boolean for whether or not to overwrite existing registered commands the discord bot. when mass registering commands to discord's api you cannot append commands. if you pass false for overwrite the library will attempt to merge the declared commands with existing commands obtained from the api and then submit all of those in order to preserve existing commands.
+
 in order to.. actually interact with the api from the command, you can just use the basic Javacord method of obtaining the `SlashCommandInteraction` object given by the event objects  
 you may add `SlashCommandInteraction` as a parameter in your method as long as the parameter is annotated with `@Interaction` *and* it is the FIRST parameter in your method
 ```java
