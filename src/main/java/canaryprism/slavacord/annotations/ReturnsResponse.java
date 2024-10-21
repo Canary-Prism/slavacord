@@ -8,5 +8,10 @@ import java.lang.annotation.Target;
 public @interface ReturnsResponse {
     boolean ephemeral() default false;
     boolean silent() default false;
+
+    /**
+     * whether the response should be split into multiple messages on the limit of 2000 characters
+     * @return boolean
+     */
     boolean splitOnLimit() default true;
 }

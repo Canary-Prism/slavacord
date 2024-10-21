@@ -20,5 +20,9 @@ public @interface Async {
     boolean respondLater() default true;
 
 
+    /**
+     * the threading mode to use for command dispatching
+     * @return the threading mode to use for command dispatching
+     */
     ThreadingMode threadingMode() default ThreadingMode.none;
 }
