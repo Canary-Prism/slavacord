@@ -227,7 +227,7 @@ public class CommandHandler {
                             } catch (Throwable e) {
                                 logger.error("Exception in command execution thread", e);
                             }
-                        }, async.threadingMode() == ThreadingMode.none? async.threadingMode() : threading_mode);
+                        }, (async.threadingMode() != ThreadingMode.none)? async.threadingMode() : threading_mode);
                     }
 
 
