@@ -255,7 +255,9 @@ public class CommandHandler {
                 for (var e : options) {
                     try {
                         findMethodAndExecute(names, index + 1, interaction, interaction_options.getOptionByName(e.name()).get(), null, e);
-                    } catch (NoSuchElementException n) {}
+                    } catch (NoSuchElementException n) {
+                        // ignore
+                    }
                 }
             }
         }
