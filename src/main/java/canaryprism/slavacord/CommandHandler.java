@@ -746,7 +746,7 @@ public class CommandHandler {
                     ((ArrayList<SlashCommandData>) target_list).add(new SlashCommandData(
                         name, 
                         description, 
-                        (server_id == 0)? command.enabledInDMs() : false, 
+                        (server_id == 0) && command.enabledInDMs(), 
                         server_id, 
                         options, 
                         method,
@@ -818,7 +818,7 @@ public class CommandHandler {
                     ((ArrayList<SlashCommandData>) target_list).add(new SlashCommandData(
                         name, 
                         description, 
-                        (server_id == 0)? group_of_commands.enabledInDMs() : false, 
+                        (server_id == 0) && group_of_commands.enabledInDMs(), 
                         server_id, 
                         options, 
                         null,
