@@ -68,7 +68,7 @@ public class CommandHandler {
 
     private void listener(SlashCommandCreateEvent e) {
         var interaction = e.getSlashCommandInteraction();
-        var names = interaction.getFullCommandName().split(" ");
+        var names = interaction.getFullCommandName().split(" "); // TODO: please make this less inefficient
 
         synchronized (commands) {
             commands.forEach((command) -> {
@@ -103,7 +103,7 @@ public class CommandHandler {
         if (name.equals(looking_for)) {
             if (index == names.length - 1) {
                 if (method == null) {
-                    throw new RuntimeException("SlashCommandData has no method");
+                    throw new IllegalArgumentException("SlashCommandData has no method");
                 }
                 try {
 
@@ -132,7 +132,7 @@ public class CommandHandler {
                                         case CHANNEL -> parameters.add(interaction_options.getArgumentChannelValueByName(options.get(i).name()).get());
                                         case ROLE -> parameters.add(interaction_options.getArgumentRoleValueByName(options.get(i).name()).get());
                                         case MENTIONABLE -> parameters.add(interaction_options.getArgumentMentionableValueByName(options.get(i).name()).get());
-                                        default -> throw new RuntimeException("Invalid option type");
+                                        default -> throw new IllegalArgumentException("Invalid option type");
                                     }
                                 else
                                     switch (option_type) {
@@ -143,13 +143,13 @@ public class CommandHandler {
                                         case CHANNEL -> parameters.add(interaction_options.getArgumentChannelValueByName(options.get(i).name()));
                                         case ROLE -> parameters.add(interaction_options.getArgumentRoleValueByName(options.get(i).name()));
                                         case MENTIONABLE -> parameters.add(interaction_options.getArgumentMentionableValueByName(options.get(i).name()));
-                                        default -> throw new RuntimeException("Invalid option type");
+                                        default -> throw new IllegalArgumentException("Invalid option type");
                                     }
                             } else {
                                 if (is_required)
                                     switch (option_type) {
                                         case LONG -> parameters.add(options.get(i).choices().get(interaction_options.getArgumentLongValueByName(options.get(i).name()).get().intValue()).value());
-                                        default -> throw new RuntimeException("Invalid option type");
+                                        default -> throw new IllegalArgumentException("Invalid option type");
                                     }
                                 else
                                     switch (option_type) {
@@ -159,7 +159,7 @@ public class CommandHandler {
                                             else
                                                 parameters.add(Optional.empty());
                                         }
-                                        default -> throw new RuntimeException("Invalid option type");
+                                        default -> throw new IllegalArgumentException("Invalid option type");
                                     }
                             }
                         }
@@ -240,7 +240,7 @@ public class CommandHandler {
                 }
             } else {
                 if (options == null) {
-                    throw new RuntimeException("SlashCommandData has no options");
+                    throw new IllegalArgumentException("SlashCommandData has no options");
                 }
                 for (var e : options) {
                     try {
