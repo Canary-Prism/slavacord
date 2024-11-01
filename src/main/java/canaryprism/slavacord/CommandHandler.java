@@ -611,12 +611,12 @@ public class CommandHandler {
                         }
 
                         var option_type = switch (
-                            (!inner_class.isEnum())? 
-                                ((parameter_type.startsWith("java.util.Optional"))?
+                            (!inner_class.isEnum())? (
+                                (parameter_type.startsWith("java.util.Optional"))?
                                     parameter_type.split("<")[1].split(">")[0] 
                                 :
-                                    parameter_type)
-                            :
+                                    parameter_type
+                            ) :
                                 "enum"
                         ) {
                             case "java.lang.String" -> org.javacord.api.interaction.SlashCommandOptionType.STRING;
