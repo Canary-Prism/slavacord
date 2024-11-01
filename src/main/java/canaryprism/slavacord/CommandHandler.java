@@ -508,8 +508,8 @@ public class CommandHandler {
     static {
         try {
             custom_name_getter = MethodHandles.lookup().findVirtual(CustomChoiceName.class, "getCustomName", MethodType.methodType(String.class));
-        } catch (Throwable e) {
-            throw new RuntimeException(e); // this should never happen
+        } catch (Exception e) {
+            throw new NoSuchElementException(e); // this should never happen
         }
     }
 
