@@ -33,7 +33,7 @@ public record SlashCommandOptionData<T>(
                 + requires_interaction + ", method = " + method + ", options = [";
         
 
-        if (options != null && options.size() > 0) {
+        if (options != null && !options.isEmpty()) {
             for (SlashCommandOptionData<?> option : options) {
                 value += "\n" + option.toString(indent + 1) + ",";
             }
@@ -44,7 +44,7 @@ public record SlashCommandOptionData<T>(
 
         value += indent_str + ", choices = [";
 
-        if (choices != null && choices.size() > 0) {
+        if (choices != null && !choices.isEmpty()) {
             for (SlashCommandOptionChoiceData<T> choice : choices) {
                 value += "\n" + choice.toString(indent + 1) + ",";
             }
@@ -78,13 +78,13 @@ public record SlashCommandOptionData<T>(
         builder.setRequired(required);
         builder.setType(type);
 
-        if (options != null && options.size() > 0) {
+        if (options != null && !options.isEmpty()) {
             for (SlashCommandOptionData<?> option : options) {
                 builder.addOption(option.toSlashCommandOptionBuilder().build());
             }
         }
 
-        if (choices != null && choices.size() > 0) {
+        if (choices != null && !choices.isEmpty()) {
             for (SlashCommandOptionChoiceData<T> choice : choices) {
                 builder.addChoice(choice.toSlashCommandOptionChoiceBuilder().build());
             }
