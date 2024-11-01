@@ -872,7 +872,7 @@ public class CommandHandler {
         } else if (choice.getStringValue().isPresent()) {
             return new SlashCommandOptionChoiceData<String>(name, choice.getStringValue().get());
         } else {
-            throw new RuntimeException("SlashCommandOptionChoice from server has neither a long value nor a string value");
+            throw new IllegalArgumentException("SlashCommandOptionChoice from server has neither a long value nor a string value");
         }
     }
 }
