@@ -74,9 +74,7 @@ public class CommandHandler {
         var names = space_pattern.split(interaction.getFullCommandName());
 
         synchronized (commands) {
-            commands.forEach((command) -> {
-                findMethodAndExecute(names, 0, interaction, interaction, command, null);
-            });
+            commands.forEach((command) -> findMethodAndExecute(names, 0, interaction, interaction, command, null));
         }
     }
 
@@ -152,21 +150,26 @@ public class CommandHandler {
                                     default -> throw new IllegalArgumentException("Invalid option type");
                                 }
                         } else {
-                            if (is_required)
-                                switch (option_type) {
-                                    case LONG -> parameters.add(options.get(i).choices().get(interaction_options.getArgumentLongValueByName(options.get(i).name()).get().intValue()).value());
-                                    default -> throw new IllegalArgumentException("Invalid option type");
-                                }
-                            else
-                                switch (option_type) {
-                                    case LONG -> {
-                                        if (interaction_options.getArgumentLongValueByName(options.get(i).name()).isPresent())
-                                            parameters.add(Optional.of(options.get(i).choices().get(interaction_options.getArgumentLongValueByName(options.get(i).name()).get().intValue()).value()));
-                                        else
-                                            parameters.add(Optional.empty());
-                                    }
-                                    default -> throw new IllegalArgumentException("Invalid option type");
-                                }
+                            if (option_type != org.javacord.api.interaction.SlashCommandOptionType.LONG) {
+                                throw new IllegalArgumentException("Invalid option type for enum");
+                            }
+                            if (is_required) {
+                                parameters.add(options.get(i).choices().get(
+                                        interaction_options.getArgumentLongValueByName(
+                                            options.get(i).name()
+                                        ).get().intValue()
+                                    ).value()
+                                );
+                            } else {
+                                if (interaction_options.getArgumentLongValueByName(options.get(i).name()).isPresent())
+                                    parameters.add(Optional.of(
+                                        options.get(i).choices().get(
+                                            interaction_options.getArgumentLongValueByName(options.get(i).name()).get().intValue()
+                                        ).value()
+                                    ));
+                                else
+                                    parameters.add(Optional.empty());
+                            }
                         }
                     }
                 }
