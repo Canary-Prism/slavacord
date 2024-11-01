@@ -484,10 +484,10 @@ public class CommandHandler {
             if (!overwrites) {
                 for (int i = 0; i < processed_commands.size(); i++) {
                     for (int j = 0; j < commands.size(); j++) {
-                        if (processed_commands.get(i).name().equals(commands.get(j).name()) && processed_commands.get(i).server_id() == commands.get(j).server_id()) {
-                            if (!processed_commands.get(i).equals(commands.get(j))) {
-                                commands.remove(j--);
-                            }
+                        if (processed_commands.get(i).name().equals(commands.get(j).name()) 
+                            && processed_commands.get(i).server_id() == commands.get(j).server_id()
+                            && !processed_commands.get(i).equals(commands.get(j))) {
+                            commands.remove(j--);
                         }
                     }
                 }
