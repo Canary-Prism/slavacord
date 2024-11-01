@@ -331,7 +331,7 @@ public class CommandHandler {
             responder.setFlags(MessageFlag.SUPPRESS_NOTIFICATIONS);
         }
         if (returns_response.splitOnLimit()) {
-            var split = splitString((String)returned, 2000);
+            var split = splitString(returned, 2000);
             responder.setContent(split[0]);
             responder.respond().join();
 
@@ -350,7 +350,7 @@ public class CommandHandler {
             }
 
         } else {
-            responder.setContent((String)returned);
+            responder.setContent(returned);
             responder.respond().join();
         }
     }
