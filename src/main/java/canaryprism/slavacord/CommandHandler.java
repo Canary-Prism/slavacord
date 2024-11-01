@@ -424,6 +424,7 @@ public class CommandHandler {
         this.register(Objects.requireNonNull(target_instance, "Commands instance cannot be null"), target_instance.getClass(), overwrites);
     }
 
+    @SuppressWarnings("java:S127")
     private void register(Commands target_instance, Class<? extends Commands> target, boolean overwrites) {
         server_id = -1;
 
