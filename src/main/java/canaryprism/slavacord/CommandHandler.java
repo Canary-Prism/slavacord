@@ -580,7 +580,9 @@ public class CommandHandler {
                         if (method.getParameters()[0].getType() != org.javacord.api.interaction.SlashCommandInteraction.class)
                             throw new ParsingException("@Interaction can only be applied to the first parameter with type org.javacord.api.interaction.SlashCommandInteraction", "with parameter " + target.getName() + "." + method.getName() + "(" + method.getParameters()[0].getType().getSimpleName() + " " + method.getParameters()[0].getName() + ")");
                     }
-                } catch (ArrayIndexOutOfBoundsException e) {}
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    // do nothing
+                }
 
                 ArrayList<SlashCommandOptionData<?>> options = new ArrayList<>();
                 try {
