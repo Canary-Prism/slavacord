@@ -23,6 +23,7 @@ public record SlashCommandOptionData<T>(
         return toString(0);
     }
 
+    @SuppressWarnings("java:S1643") // toString(int) isn't meant to be performant anyway
     public String toString(int indent) {
         String indent_str = "    ".repeat(indent);
 
