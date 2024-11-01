@@ -105,139 +105,143 @@ public class CommandHandler {
                 if (method == null) {
                     throw new IllegalArgumentException("SlashCommandData has no method");
                 }
-                try {
 
-                    var handle = methodmap.getOrDefault(method, MethodHandles.lookup().unreflect(method));
-                    if (!methodmap.containsKey(method)) {
-                        methodmap.put(method, handle);
+                if (!methodmap.containsKey(method)) {
+                    try {
+                        methodmap.put(method, MethodHandles.lookup().unreflect(method));
+                    } catch (IllegalAccessException e) {
+                        throw new NoSuchElementException(e);
                     }
-                    var parameters = new ArrayList<Object>();
-                    if (!Modifier.isStatic(method.getModifiers())) {
-                        parameters.add(Objects.requireNonNull(instance, "Instance not found for non-static method"));
-                    }
-                    if (requires_interaction) {
-                        parameters.add(interaction);
-                    }
-                    if (options != null) {
-                        for (int i = 0; i < options.size(); i++) {
-                            var option_type = options.get(i).type();
-                            boolean is_required = options.get(i).required();
-                            if (!options.get(i).stores_enum()) {
-                                if (is_required)
-                                    switch (option_type) {
-                                        case STRING -> parameters.add(interaction_options.getArgumentStringValueByName(options.get(i).name()).get());
-                                        case LONG -> parameters.add(interaction_options.getArgumentLongValueByName(options.get(i).name()).get());
-                                        case BOOLEAN -> parameters.add(interaction_options.getArgumentBooleanValueByName(options.get(i).name()).get());
-                                        case USER -> parameters.add(interaction_options.getArgumentUserValueByName(options.get(i).name()).get());
-                                        case CHANNEL -> parameters.add(interaction_options.getArgumentChannelValueByName(options.get(i).name()).get());
-                                        case ROLE -> parameters.add(interaction_options.getArgumentRoleValueByName(options.get(i).name()).get());
-                                        case MENTIONABLE -> parameters.add(interaction_options.getArgumentMentionableValueByName(options.get(i).name()).get());
-                                        default -> throw new IllegalArgumentException("Invalid option type");
+                }
+                var handle = Objects.requireNonNull(methodmap.get(method));
+                var parameters = new ArrayList<Object>();
+                if (!Modifier.isStatic(method.getModifiers())) {
+                    parameters.add(Objects.requireNonNull(instance, "Instance not found for non-static method"));
+                }
+                if (requires_interaction) {
+                    parameters.add(interaction);
+                }
+                if (options != null) {
+                    for (int i = 0; i < options.size(); i++) {
+                        var option_type = options.get(i).type();
+                        boolean is_required = options.get(i).required();
+                        if (!options.get(i).stores_enum()) {
+                            if (is_required)
+                                switch (option_type) {
+                                    case STRING -> parameters.add(interaction_options.getArgumentStringValueByName(options.get(i).name()).get());
+                                    case LONG -> parameters.add(interaction_options.getArgumentLongValueByName(options.get(i).name()).get());
+                                    case BOOLEAN -> parameters.add(interaction_options.getArgumentBooleanValueByName(options.get(i).name()).get());
+                                    case USER -> parameters.add(interaction_options.getArgumentUserValueByName(options.get(i).name()).get());
+                                    case CHANNEL -> parameters.add(interaction_options.getArgumentChannelValueByName(options.get(i).name()).get());
+                                    case ROLE -> parameters.add(interaction_options.getArgumentRoleValueByName(options.get(i).name()).get());
+                                    case MENTIONABLE -> parameters.add(interaction_options.getArgumentMentionableValueByName(options.get(i).name()).get());
+                                    default -> throw new IllegalArgumentException("Invalid option type");
+                                }
+                            else
+                                switch (option_type) {
+                                    case STRING -> parameters.add(interaction_options.getArgumentStringValueByName(options.get(i).name()));
+                                    case LONG -> parameters.add(interaction_options.getArgumentLongValueByName(options.get(i).name()));
+                                    case BOOLEAN -> parameters.add(interaction_options.getArgumentBooleanValueByName(options.get(i).name()));
+                                    case USER -> parameters.add(interaction_options.getArgumentUserValueByName(options.get(i).name()));
+                                    case CHANNEL -> parameters.add(interaction_options.getArgumentChannelValueByName(options.get(i).name()));
+                                    case ROLE -> parameters.add(interaction_options.getArgumentRoleValueByName(options.get(i).name()));
+                                    case MENTIONABLE -> parameters.add(interaction_options.getArgumentMentionableValueByName(options.get(i).name()));
+                                    default -> throw new IllegalArgumentException("Invalid option type");
+                                }
+                        } else {
+                            if (is_required)
+                                switch (option_type) {
+                                    case LONG -> parameters.add(options.get(i).choices().get(interaction_options.getArgumentLongValueByName(options.get(i).name()).get().intValue()).value());
+                                    default -> throw new IllegalArgumentException("Invalid option type");
+                                }
+                            else
+                                switch (option_type) {
+                                    case LONG -> {
+                                        if (interaction_options.getArgumentLongValueByName(options.get(i).name()).isPresent())
+                                            parameters.add(Optional.of(options.get(i).choices().get(interaction_options.getArgumentLongValueByName(options.get(i).name()).get().intValue()).value()));
+                                        else
+                                            parameters.add(Optional.empty());
                                     }
-                                else
-                                    switch (option_type) {
-                                        case STRING -> parameters.add(interaction_options.getArgumentStringValueByName(options.get(i).name()));
-                                        case LONG -> parameters.add(interaction_options.getArgumentLongValueByName(options.get(i).name()));
-                                        case BOOLEAN -> parameters.add(interaction_options.getArgumentBooleanValueByName(options.get(i).name()));
-                                        case USER -> parameters.add(interaction_options.getArgumentUserValueByName(options.get(i).name()));
-                                        case CHANNEL -> parameters.add(interaction_options.getArgumentChannelValueByName(options.get(i).name()));
-                                        case ROLE -> parameters.add(interaction_options.getArgumentRoleValueByName(options.get(i).name()));
-                                        case MENTIONABLE -> parameters.add(interaction_options.getArgumentMentionableValueByName(options.get(i).name()));
-                                        default -> throw new IllegalArgumentException("Invalid option type");
-                                    }
-                            } else {
-                                if (is_required)
-                                    switch (option_type) {
-                                        case LONG -> parameters.add(options.get(i).choices().get(interaction_options.getArgumentLongValueByName(options.get(i).name()).get().intValue()).value());
-                                        default -> throw new IllegalArgumentException("Invalid option type");
-                                    }
-                                else
-                                    switch (option_type) {
-                                        case LONG -> {
-                                            if (interaction_options.getArgumentLongValueByName(options.get(i).name()).isPresent())
-                                                parameters.add(Optional.of(options.get(i).choices().get(interaction_options.getArgumentLongValueByName(options.get(i).name()).get().intValue()).value()));
-                                            else
-                                                parameters.add(Optional.empty());
-                                        }
-                                        default -> throw new IllegalArgumentException("Invalid option type");
-                                    }
-                            }
+                                    default -> throw new IllegalArgumentException("Invalid option type");
+                                }
                         }
                     }
+                }
 
-                    final Async async = isAsyncRecursive(method);
-                    final ReturnsResponse returns_response = method.getDeclaredAnnotation(ReturnsResponse.class);
+                final Async async = isAsyncRecursive(method);
+                final ReturnsResponse returns_response = method.getDeclaredAnnotation(ReturnsResponse.class);
 
-                    if (async == null) {
-
+                if (async == null) {
+                    try {
                         Object returned = handle.invokeWithArguments(parameters);
                         
                         if (returns_response != null && returned != null && !((String)returned).isBlank()) {
                             processImmediateRespond(interaction, returns_response, (String)returned);
                         }
-                    } else {
-                        async.threadingMode();
-                        dispatchThreaded(() -> {
-                            try {
+                    } catch (Throwable e) {
+                        logger.error("Exception in event listener thread: ", e);
+                    }
+                } else {
+                    async.threadingMode();
+                    dispatchThreaded(() -> {
+                        try {
 
-                                if (returns_response != null) {
-                                    if (async != null && async.respondLater()) {
-                                        var responder = interaction.respondLater(returns_response.ephemeral()).join();
-                                        Object returned = handle.invokeWithArguments(parameters);
+                            if (returns_response != null) {
+                                if (async != null && async.respondLater()) {
+                                    var responder = interaction.respondLater(returns_response.ephemeral()).join();
+                                    Object returned = handle.invokeWithArguments(parameters);
 
-                                        if (returned != null && !((String)returned).isBlank()) {
+                                    if (returned != null && !((String)returned).isBlank()) {
+
+                                        if (returns_response.ephemeral()) {
+                                            responder.setFlags(MessageFlag.EPHEMERAL);
+                                        }
+                                        if (returns_response.silent()) {
+                                            responder.setFlags(MessageFlag.SUPPRESS_NOTIFICATIONS);
+                                        }
+
+                                        if (returns_response.splitOnLimit()) {
+                                            var split = splitString((String)returned, 2000);
+                                            responder.setContent(split[0]);
+                                            responder.update().join();
+
+                                            var followup = interaction.createFollowupMessageBuilder();
 
                                             if (returns_response.ephemeral()) {
-                                                responder.setFlags(MessageFlag.EPHEMERAL);
+                                                followup.setFlags(MessageFlag.EPHEMERAL);
                                             }
                                             if (returns_response.silent()) {
-                                                responder.setFlags(MessageFlag.SUPPRESS_NOTIFICATIONS);
+                                                followup.setFlags(MessageFlag.SUPPRESS_NOTIFICATIONS);
                                             }
 
-                                            if (returns_response.splitOnLimit()) {
-                                                var split = splitString((String)returned, 2000);
-                                                responder.setContent(split[0]);
-                                                responder.update().join();
-
-                                                var followup = interaction.createFollowupMessageBuilder();
-
-                                                if (returns_response.ephemeral()) {
-                                                    followup.setFlags(MessageFlag.EPHEMERAL);
-                                                }
-                                                if (returns_response.silent()) {
-                                                    followup.setFlags(MessageFlag.SUPPRESS_NOTIFICATIONS);
-                                                }
-
-                                                for (int i = 1; i < split.length; i++) {
-                                                    followup.setContent(split[i]);
-                                                    followup.send().join();
-                                                }
-
-                                            } else {
-                                                responder.setContent((String)returned);
-                                                responder.update().join();
+                                            for (int i = 1; i < split.length; i++) {
+                                                followup.setContent(split[i]);
+                                                followup.send().join();
                                             }
 
+                                        } else {
+                                            responder.setContent((String)returned);
+                                            responder.update().join();
                                         }
-                                    } else {
-                                        Object returned = handle.invokeWithArguments(parameters);
-                                        processImmediateRespond(interaction, returns_response, (String)returned);
+
                                     }
-
-
                                 } else {
-                                    handle.invokeWithArguments(parameters);
+                                    Object returned = handle.invokeWithArguments(parameters);
+                                    processImmediateRespond(interaction, returns_response, (String)returned);
                                 }
-                            } catch (Throwable e) {
-                                logger.error("Exception in command execution thread", e);
+
+
+                            } else {
+                                handle.invokeWithArguments(parameters);
                             }
-                        }, (async.threadingMode() != ThreadingMode.none)? async.threadingMode() : threading_mode);
-                    }
-
-
-                } catch (Throwable e) {
-                    throw new RuntimeException(e);
+                        } catch (Throwable e) {
+                            logger.error("Exception in command execution thread", e);
+                        }
+                    }, (async.threadingMode() != ThreadingMode.none)? async.threadingMode() : threading_mode);
                 }
+
+
+            
             } else {
                 if (options == null) {
                     throw new IllegalArgumentException("SlashCommandData has no options");
@@ -277,13 +281,13 @@ public class CommandHandler {
             handle = Optional.of((ExecutorService)vthread_executor_getter.invoke(null));
 
             logger.debug("Virtual thread support found for this JVM");
-        } catch (Throwable e) {
+        } catch (Exception e) {
             logger.info("No virtual thread support found for this JVM");
         }
         vthread_ex = handle;
     }
 
-    private static void dispatchThreaded(Runnable runnable, ThreadingMode mode) throws Throwable {
+    private static void dispatchThreaded(Runnable runnable, ThreadingMode mode) {
         var dispatcher = switch (mode) {
             case platform -> osthread_ex;
             case virtual -> vthread_ex.orElseThrow(() -> new UnsupportedOperationException("No virtual thread support found for this JVM"));
