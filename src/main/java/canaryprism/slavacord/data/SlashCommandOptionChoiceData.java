@@ -23,7 +23,7 @@ public record SlashCommandOptionChoiceData<T>(
         } else if (value.getClass().isEnum()) {
             return new SlashCommandOptionChoiceBuilder().setName(name).setValue(((Enum<?>)value).ordinal());
         } else {
-            throw new RuntimeException("Invalid type for SlashCommandOptionChoiceData.value: " + value.getClass());
+            throw new IllegalArgumentException("Invalid type for SlashCommandOptionChoiceData.value: " + value.getClass());
         }
     }
 }
