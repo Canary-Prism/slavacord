@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -66,9 +67,11 @@ public class CommandHandler {
         this.api.addSlashCommandCreateListener(listener);
     }
 
+    private static final Pattern space_pattern = Pattern.compile(" ");
+
     private void listener(SlashCommandCreateEvent e) {
         var interaction = e.getSlashCommandInteraction();
-        var names = interaction.getFullCommandName().split(" "); // TODO: please make this less inefficient
+        var names = space_pattern.split(interaction.getFullCommandName());
 
         synchronized (commands) {
             commands.forEach((command) -> {
