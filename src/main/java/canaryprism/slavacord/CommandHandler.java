@@ -556,7 +556,7 @@ public class CommandHandler {
                     throw new ParsingException("Command method must be static if no instance of Commandable is provided", "in method " + target.getName() + "." + method.getName());
                 }
 
-                method.setAccessible(true);
+                method.setAccessible(true); // NOSONAR because frick you
 
                 ReturnsResponse returns_response;
                 if ((returns_response = method.getDeclaredAnnotation(ReturnsResponse.class)) != null && method.getReturnType() != String.class)
