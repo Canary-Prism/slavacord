@@ -514,7 +514,7 @@ public class CommandHandler {
         }
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "java:S3011" })
     private void parseFromClass(Object instance, Class<?> target, int depth, ArrayList<? extends Data> target_list) {
 
         if (depth > 2) {
@@ -556,7 +556,7 @@ public class CommandHandler {
                     throw new ParsingException("Command method must be static if no instance of Commandable is provided", "in method " + target.getName() + "." + method.getName());
                 }
 
-                method.setAccessible(true); // NOSONAR because frick you
+                method.setAccessible(true);
 
                 ReturnsResponse returns_response;
                 if ((returns_response = method.getDeclaredAnnotation(ReturnsResponse.class)) != null && method.getReturnType() != String.class)
