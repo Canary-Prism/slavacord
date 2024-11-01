@@ -16,6 +16,8 @@ import canaryprism.slavacord.ThreadingMode;
 public @interface Async {
     /**
      * has no effect if the method does not have {@link canaryprism.slavacord.annotations.ReturnsResponse @ReturnsResponse} annotation
+     * 
+     * @return whether or not the Command Handler should use a RespondLater to respond to the command
      */
     boolean respondLater() default true;
 

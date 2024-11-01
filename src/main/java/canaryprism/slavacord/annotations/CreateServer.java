@@ -11,6 +11,9 @@ import java.lang.annotation.Target;
 @Target({ java.lang.annotation.ElementType.TYPE })
 public @interface CreateServer {
 
-    //ID of server to create command in
+    /**
+     * ID of server to create command in
+     * @return ID of server to create command in
+     */
     long value();
 }

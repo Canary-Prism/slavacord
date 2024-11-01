@@ -54,6 +54,10 @@ public class CommandHandler {
     
     private final Map<Method, MethodHandle> methodmap = new HashMap<>();
 
+    /**
+     * <p>Creates a new CommandHandler with the given DiscordApi</p>
+     * @param api the DiscordApi to use, cannot be null
+     */
     public CommandHandler(DiscordApi api) {
         this.api = Objects.requireNonNull(api, "DiscordApi cannot be null");
 
@@ -354,14 +358,55 @@ public class CommandHandler {
         return null;
     }
 
+    /**
+     * <p>unregisters the event listener</p>
+     * <p>once you call this method there is no way to reactivate the event listener of this instance ever again</p>
+     * <p>this also technically doesn't stop you from registering more commands after you call it, the listener just won't work obviously</p>
+     */
     public void stop() {
         api.removeListener(listener);
     }
 
+    /**
+     * <p>Registers a {@link Commands} <em>class</em> to be parsed by the {@link CommandHandler}</p>
+     * <p>if any of the commands are in instance methods, you must use {@link #register(Commands, boolean)} and pass an instance instead</p>
+     * <p>
+     * if the class could be parsed successfully, the commands that were parsed will take effect 
+     * and be registered with Discord. if not, this will throw a {@link ParsingException}
+     * </p>
+     * 
+     * <p>
+     * if overwrites is true, all previous commands registered by the bot <b>will be deleted from discord</b>. 
+     * yes, even the ones previously registered to this command handler.
+     * 
+     * if overwrites is false, the command handler will attempt to get the existing commands from discord, and merge them with the new commands.
+     * </p>
+     * 
+     * @param target the Class object of the Commands class to parse, must not be null
+     * @param overwrites whether or not to overwrite existing commands
+     */
     public void register(Class<? extends Commands> target, boolean overwrites) {
         this.register(null, target, overwrites);
     }
 
+    /**
+     * <p>Registers a {@link Commands} <em>instance</em> to be parsed by the {@link CommandHandler}</p>
+     * <p>if all of the commands are in static methods, consider using {@link #register(Class, boolean)} and pass the Class object instead</p>
+     * <p>
+     * if the class of the instance could be parsed successfully, the commands that were parsed will take effect 
+     * and be registered with Discord. if not, this will throw a {@link ParsingException}
+     * </p>
+     * 
+     * <p>
+     * if overwrites is true, all previous commands registered by the bot <b>will be deleted from discord</b>. 
+     * yes, even the ones previously registered to this command handler.
+     * 
+     * if overwrites is false, the command handler will attempt to get the existing commands from discord, and merge them with the new commands.
+     * </p>
+     * 
+     * @param target_instance the instance of the Commands class to parse, must not be null
+     * @param overwrites whether or not to overwrite existing commands
+     */
     public void register(Commands target_instance, boolean overwrites) {
         // technically this null check is not needed because we access the getClass() method on the exact same line but it's here for clarity
         this.register(Objects.requireNonNull(target_instance, "Commands instance cannot be null"), target_instance.getClass(), overwrites);

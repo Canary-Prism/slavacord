@@ -12,16 +12,19 @@ public @interface CommandGroup {
 
     /**
      * The name of the command.
+     * @return The name of the command.
      */
     String name();
 
     /**
      * A brief description of what the command does.
+     * @return A brief description of what the command does.
      */
     String description() default "";
 
     /**
      * Whether the command can be executed in a direct message with the bot.
+     * @return Whether the command can be executed in a direct message with the bot.
      */
     boolean enabledInDMs() default true;
 }

@@ -23,7 +23,7 @@ public enum ThreadingMode {
     daemon,
 
     /**
-     * <h3><b>Warning:</b> this mode is only available on Java 21 and above</h3>
+     * <i><b>Warning:</b> this mode is only available on Java 21 and above</i>
      * <p><b>i *will* yell at you if you use it before Java 21 :3</b></p>
      * <p>the command will be executed with virtual threads</p>
      */
