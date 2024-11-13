@@ -1,5 +1,5 @@
 module canaryprism.slavacord {
-    requires org.javacord.core;
+    requires transitive org.javacord.core;
     requires org.apache.logging.log4j;
 
     exports canaryprism.slavacord;
