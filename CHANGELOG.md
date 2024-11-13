@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.0.0
+- modules for Java 9 sake
+- can't depend on internal Javacord logger now so using log4j directly
 
 ## v1.0.2
 - all the javadocs, all of it >:3
