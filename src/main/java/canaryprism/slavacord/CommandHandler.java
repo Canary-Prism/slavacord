@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.message.MessageFlag;
@@ -30,7 +31,6 @@ import org.javacord.api.interaction.SlashCommandInteractionOptionsProvider;
 import org.javacord.api.interaction.SlashCommandOption;
 import org.javacord.api.interaction.SlashCommandOptionChoice;
 import org.javacord.api.listener.interaction.SlashCommandCreateListener;
-import org.javacord.core.util.logging.LoggerUtil;
 
 import canaryprism.slavacord.annotations.*;
 import canaryprism.slavacord.data.*;
@@ -45,7 +45,7 @@ import canaryprism.slavacord.exceptions.ParsingException;
  */
 public class CommandHandler {
 
-    private static final Logger logger = LoggerUtil.getLogger(CommandHandler.class);
+    private static final Logger logger = LogManager.getLogger(CommandHandler.class);
 
     private final DiscordApi api;
 
