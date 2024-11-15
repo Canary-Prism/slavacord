@@ -558,8 +558,8 @@ public class CommandHandler {
 
                 method.setAccessible(true);
 
-                ReturnsResponse returns_response;
-                if ((returns_response = method.getDeclaredAnnotation(ReturnsResponse.class)) != null && method.getReturnType() != String.class)
+                ReturnsResponse returns_response = method.getDeclaredAnnotation(ReturnsResponse.class);
+                if (returns_response != null && method.getReturnType() != String.class)
                     throw new ParsingException("Method with @ReturnsResponse must return a String", "in method " + target.getName() + "." + method.getName());
 
                 if (returns_response != null && returns_response.ephemeral() && returns_response.silent())
