@@ -341,7 +341,7 @@ public class CommandHandler {
 
                 logger.warn("""
                     Command with @ReturnsResponse returned a blank string! 
-                    CommandHandler will interpret this as returning without responding to the interaction, but this is likely a developer error.
+                    CommandHandler will interpret this as returning without responding to the interaction FOR NOW, but this is likely a developer error.
                     prefer returning null or an empty Optional<String> instead of a blank string to not respond to the interaction.
                     """);
 
