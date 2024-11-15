@@ -87,7 +87,7 @@ now obviously this is all well and good but it is also very verbose (it's Java o
 
 ### @ReturnsResponse
 to mitigate the verbosity for something as simple as a `/ping` command or any other command that simply returns a String message as its response, there is the `@ReturnsResponse` annotation  
-to use this annotation your method must also have a return type of `String`
+to use this annotation your method must also have a return type of `String` or `Optional<String>`
 ```java
 // in a commands class..
 @ReturnsResponse(ephemeral = true) // set the response message to be ephemeral (visible only to the command's invoker and temporary)
@@ -95,11 +95,23 @@ to use this annotation your method must also have a return type of `String`
 String ping() {
     return "Pong !";
 }
+
+@ReturnsResponse(silent = true) // set the response message to be silent (not trigger any notifications or new message sounds)
+@Command(name = "beep", description = "boop")
+Optional<String> ping() {
+    return Optional.empty("boop");
+}
 ```
 you may still ask for the `SlashCommandInteraction` object to be passed to the method, and use both methods for interacting with the user. 
 
-it might be desirable to respond with simple messages for most cases but a complex response in a specific scenario, for this purpose you are allowed to return `null` after responding with the `SlashCommandInteraction` yourself and the handler will simply not send a response  
-(side note: i would've wanted to have this functionality attached to `Optional<String>`s and have a null `String` log some sort of error to account for accidental null returns, however Java generics are type erasured for return types...)
+it might be desirable to respond with simple messages for most cases but a complex response in a specific scenario, for this purpose this library provides several methods of expressing that you'd like to return without sending a response.
+
+- if your `@ReturnsResponse` command method has an `Optional<String>` return type you can simply return `Optional.empty()` and the CommandHandler will make no attempt to send a response. note that a `null` return value will throw an IllegalArgumentException as Optionals are by convention never allowed to be `null`.
+
+- if your `@ReturnsResponse` command method has a `String` return type, you *can* return `null` to indicate no response, but this is less clear than returning an empty Optional and so is not recommended. in future versions this might generate a warning to try to guard against accidental `null` returns.  
+**WARNING:** returning a blank string (a string where all its characters are classified as "whitespace" characters) *also* causes CommandHandler to not attempt to respond with the string (originally this was done because Discord does not accept blank strings as message content anyway), however this is legacy behaviour for backwards compatibility and is very much not recommended. doing this ALWAYS generates a warning and ***WON'T BE VALID NEXT MAJOR VERSION***
+
+use one of the above methods to return after responding with the `SlashCommandInteraction` yourself and the handler will simply not send a response  
 
 ### Command Arguments
 
