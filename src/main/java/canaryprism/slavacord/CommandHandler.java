@@ -351,6 +351,18 @@ public class CommandHandler {
             }
 
             text = str;
+        } else if (return_type.equals(OPTIONAL_OF_STRING)) {
+            var opt = (Optional<?>)returned;
+            if (opt == null) {
+                // an Optional implies a contract that it will never be null
+                // this will not be treated as a valid value
+                throw new IllegalArgumentException("Invalid return value for @ReturnsResponse. you may not return a null Optional");
+            }
+            if (opt.isEmpty()) {
+                return; // we don't respond if the returned optional is empty
+            }
+
+            text = (String)opt.get();
         } else {
             throw new IllegalArgumentException("Invalid return type for @ReturnsResponse"); // this should never happen
         }
@@ -547,6 +559,21 @@ public class CommandHandler {
         }
     }
 
+    private static final ParameterizedType OPTIONAL_OF_STRING = new ParameterizedType() {
+        @Override
+        public Type[] getActualTypeArguments() {
+            return new Type[] { String.class };
+        }
+        @Override
+        public Type getRawType() {
+            return Optional.class;
+        }
+        @Override
+        public Type getOwnerType() {
+            return null;
+        }
+    };
+
     @SuppressWarnings({ "unchecked", "java:S3011" })
     private void parseFromClass(Object instance, Class<?> target, int depth, ArrayList<? extends Data> target_list) {
 
@@ -592,8 +619,9 @@ public class CommandHandler {
                 method.setAccessible(true);
 
                 ReturnsResponse returns_response = method.getDeclaredAnnotation(ReturnsResponse.class);
-                if (returns_response != null && method.getReturnType() != String.class)
-                    throw new ParsingException("Method with @ReturnsResponse must return a String", "in method " + target.getName() + "." + method.getName());
+                if (returns_response != null && method.getReturnType() != String.class
+                    && !method.getGenericReturnType().equals(OPTIONAL_OF_STRING))
+                    throw new ParsingException("Method with @ReturnsResponse must return a String or Optional<String>", "in method " + target.getName() + "." + method.getName());
 
                 if (returns_response != null && returns_response.ephemeral() && returns_response.silent())
                     throw new ParsingException("@ReturnsResponse cannot have both ephemeral and silent set to true", "in method " + target.getName() + "." + method.getName());
