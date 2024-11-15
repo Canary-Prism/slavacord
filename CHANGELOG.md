@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.1.0
+- add support for `Optional<String>` return type for `@ReturnsResponse`
+- deprecate returning blank `String` value for `@ReturnsResponse`
+
 ## v2.0.0
 - modules for Java 9 sake
 - can't depend on internal Javacord logger now so using log4j directly
