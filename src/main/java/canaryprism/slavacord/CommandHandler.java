@@ -182,7 +182,7 @@ public class CommandHandler {
                         Object returned = handle.invokeWithArguments(parameters);
                         
                         if (returns_response != null && returned != null && !((String)returned).isBlank()) {
-                            processImmediateRespond(interaction, returns_response, (String)returned);
+                            processImmediateRespond(interaction, returns_response, method.getGenericReturnType(), (String)returned);
                         }
                     } catch (Throwable e) {
                         logger.error("Exception in event listener thread: ", e);
@@ -233,7 +233,7 @@ public class CommandHandler {
                                     }
                                 } else {
                                     Object returned = handle.invokeWithArguments(parameters);
-                                    processImmediateRespond(interaction, returns_response, (String)returned);
+                                    processImmediateRespond(interaction, returns_response, method.getGenericReturnType(), (String)returned);
                                 }
 
 
@@ -321,7 +321,38 @@ public class CommandHandler {
         return results.toArray(String[]::new);
     }
 
-    private void processImmediateRespond(SlashCommandInteraction interaction, ReturnsResponse returns_response, String returned) {
+    private void processImmediateRespond(SlashCommandInteraction interaction, ReturnsResponse returns_response, Type return_type, Object returned) {
+
+        String text;
+
+        if (return_type.equals(String.class)) {
+            var str = (String)returned;
+            if (str == null) {
+                return; // we don't respond if the returned string is null
+            }
+            if (str.isBlank()) {
+                /* 
+                 * if the returned string is blank, we don't respond
+                 * this is because you can't even send a blank message to discord
+                 * this is technically a valid way to not respond to a command
+                 * but it's likely also a developer error
+                 * because of this, we log a warning
+                 */
+
+                logger.warn("""
+                    Command with @ReturnsResponse returned a blank string! 
+                    CommandHandler will interpret this as returning without responding to the interaction, but this is likely a developer error.
+                    prefer returning null or an empty Optional<String> instead of a blank string to not respond to the interaction.
+                    """);
+
+                return;
+            }
+
+            text = str;
+        } else {
+            throw new IllegalArgumentException("Invalid return type for @ReturnsResponse"); // this should never happen
+        }
+
         var responder = interaction.createImmediateResponder();
 
         if (returns_response.ephemeral()) {
@@ -331,7 +362,7 @@ public class CommandHandler {
             responder.setFlags(MessageFlag.SUPPRESS_NOTIFICATIONS);
         }
         if (returns_response.splitOnLimit()) {
-            var split = splitString(returned, 2000);
+            var split = splitString(text, 2000);
             responder.setContent(split[0]);
             responder.respond().join();
 
@@ -350,7 +381,7 @@ public class CommandHandler {
             }
 
         } else {
-            responder.setContent(returned);
+            responder.setContent(text);
             responder.respond().join();
         }
     }
