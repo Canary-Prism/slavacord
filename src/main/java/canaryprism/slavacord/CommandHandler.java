@@ -184,7 +184,7 @@ public class CommandHandler {
                         Object returned = handle.invokeWithArguments(parameters);
                         
                         if (returns_response != null && returned != null && !((String)returned).isBlank()) {
-                            processImmediateRespond(interaction, returns_response, method.getGenericReturnType(), (String)returned);
+                            processImmediateRespond(interaction, returns_response, method.getGenericReturnType(), returned);
                         }
                     } catch (Throwable e) {
                         logger.error("Exception in event listener thread: ", e);
@@ -235,7 +235,7 @@ public class CommandHandler {
                                     }
                                 } else {
                                     Object returned = handle.invokeWithArguments(parameters);
-                                    processImmediateRespond(interaction, returns_response, method.getGenericReturnType(), (String)returned);
+                                    processImmediateRespond(interaction, returns_response, method.getGenericReturnType(), returned);
                                 }
 
 
