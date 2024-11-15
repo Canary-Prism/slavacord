@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.1.1
+- fixed annoyingly simple bug breaking `Optional<String>` returns for `@ReturnsResponse`
+
 ## v2.1.0
 - add support for `Optional<String>` return type for `@ReturnsResponse`
 - deprecate returning blank `String` value for `@ReturnsResponse`
