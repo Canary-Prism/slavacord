@@ -2,6 +2,8 @@ package canaryprism.slavacord;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.Optional;
+
 import org.junit.jupiter.api.Test;
 
 import canaryprism.slavacord.annotations.Command;
@@ -62,6 +64,50 @@ public class AppTest {
                         "    with parameter canaryprism.slavacord.AppTest$1Mewo.mewo(String arg0)\n" + //
                         "    in method canaryprism.slavacord.AppTest$1Mewo.mewo\n" + //
                         "    at class canaryprism.slavacord.AppTest$1Mewo", e.getMessage());
+        }
+    }
+
+    @Test
+    public void returnsResponseAllowsOptionalOfString() {
+        CommandHandler handler = new CommandHandler(new MockDiscordApi());
+
+        @CreateGlobal
+        class Mewo implements Commands {
+            @ReturnsResponse
+            @Command(name = "mewo", description = "mewo")
+            public Optional<String> mewo() {
+                return Optional.of("mewo");
+            }
+        }
+
+
+        handler.register(new Mewo(), false);
+    }
+
+    @Test
+    public void returnsResponseDisallowsOptionalOfAnythingElse() {
+        CommandHandler handler = new CommandHandler(new MockDiscordApi());
+
+        @CreateGlobal
+        class Mewo implements Commands {
+            @ReturnsResponse
+            @Command(name = "mewo", description = "mewo")
+            public Optional<String> mewo() {
+                return Optional.of("mewo");
+            }
+
+            @ReturnsResponse
+            @Command(name = "mrrp", description = "mrrp")
+            public Optional<Object> mrrp() {
+                return Optional.of("mewo");
+            }
+        }
+
+        try {
+            handler.register(new Mewo(), false);
+            fail("should not be able to parse");
+        } catch (ParsingException e) {
+            // do nothing
         }
     }
 }
