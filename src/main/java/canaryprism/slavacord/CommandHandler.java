@@ -190,7 +190,6 @@ public class CommandHandler {
                         logger.error("Exception in event listener thread: ", e);
                     }
                 } else {
-                    async.threadingMode();
                     dispatchThreaded(() -> {
                         try {
 
