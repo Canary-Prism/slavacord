@@ -99,7 +99,7 @@ String ping() {
 @ReturnsResponse(silent = true) // set the response message to be silent (not trigger any notifications or new message sounds)
 @Command(name = "beep", description = "boop")
 Optional<String> ping() {
-    return Optional.empty("boop");
+    return Optional.of("boop");
 }
 ```
 you may still ask for the `SlashCommandInteraction` object to be passed to the method, and use both methods for interacting with the user. 
