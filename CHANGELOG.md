@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.1.2
+- changed dependencies slightly... i don't even know what was happening
+
 ## v2.1.1
 - fixed annoyingly simple bug breaking `Optional<String>` returns for `@ReturnsResponse`
 
