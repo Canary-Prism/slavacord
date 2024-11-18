@@ -245,6 +245,23 @@ class MyCommands implements Commands {
 
 (for nerds: this library is inner-type-aware. if you originally registered with an *instance* of `Commands` then it will continue to new instances for your nested classes, they can be instance nested or static nested)
 
+### Permissions
+
+Discord commands have a property called "Default Required Permissions" and it means that any user must have all of the permissions the command requires granted in order to be able to use it in a server
+
+in this library that's represented by annotating with `@RequiresPermissions()`, it takes an array of `PermissionType`s where any user must have all of them granted in order to execute the command
+
+```java
+// in a commands class
+@RequiresPermissions({ PermissionType.MANAGE_SERVER })
+@Command(name = "mewo", description = "mewo")
+void mewo() {}
+```
+
+NOTE: if you specify an empty array here, Discord's default required permissions will take effect, which is requiring `PermissionType.ADMINISTRATOR`
+
+keep in mind this is just a *default*, aka, anyone with the permission Manage Server may be able to change who can execute a particular command and where at any time in that particular server
+
 ### @Async
 
 just kidding, it's not actual async in the sense of async/await (obviously)
