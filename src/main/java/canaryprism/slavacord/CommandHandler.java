@@ -345,14 +345,10 @@ public class CommandHandler {
                  * but it's likely also a developer error
                  * because of this, we log a warning
                  */
-
-                logger.warn("""
-                    Command with @ReturnsResponse returned a blank string!
-                    CommandHandler will interpret this as returning without responding to the interaction FOR NOW, but this is likely a developer error.
-                    prefer returning null or an empty Optional<String> instead of a blank string to not respond to the interaction.
+                throw new IllegalArgumentException("""
+                    Invalid return value for @ReturnsResponse. you may not return a blank String
+                    if you want to not respond to the interaction, return null or an empty Optional<String> instead
                     """);
-
-                return Optional.empty();
             }
 
             text = str;
