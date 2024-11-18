@@ -12,6 +12,7 @@ public record SlashCommandData(
     String name,
     String description,
     boolean enabled_in_DMs,
+    boolean nsfw,
     EnumSet<PermissionType> required_permissions,
     /**
      * The server ID to register the command in. (0 for global)
@@ -71,6 +72,7 @@ public record SlashCommandData(
         builder.setDescription(description);
 
         builder.setEnabledInDms(enabled_in_DMs);
+        builder.setNsfw(nsfw);
 
         if (required_permissions != null) {
             builder.setDefaultEnabledForPermissions(required_permissions);

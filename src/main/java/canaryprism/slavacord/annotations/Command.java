@@ -28,4 +28,11 @@ public @interface Command {
      * @return Whether the command can be executed in a direct message with the bot.
      */
     boolean enabledInDMs() default true;
+
+    /**
+     * Whether the command is NSFW or not
+     * <p><strong>NOTE: this will only take effect on root commands (not nested)</strong></p>
+     * @return Whether the command is NSFW or not
+     */
+    boolean nsfw() default false;
 }

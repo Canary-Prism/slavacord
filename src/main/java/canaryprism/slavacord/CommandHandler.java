@@ -832,6 +832,7 @@ public class CommandHandler {
                         name, 
                         description, 
                         (server_id == 0) && command.enabledInDMs(), 
+                        command.nsfw(),
                         Optional.ofNullable(permissions).map((e) -> (e.isEmpty()) ? EnumSet.noneOf(PermissionType.class) : EnumSet.copyOf(e)).orElse(null),
                         server_id, 
                         options, 
@@ -936,6 +937,7 @@ public class CommandHandler {
                         name, 
                         description, 
                         (server_id == 0) && group_of_commands.enabledInDMs(), 
+                        group_of_commands.nsfw(),
                         Optional.ofNullable(permissions).map((e) -> (e.isEmpty()) ? EnumSet.noneOf(PermissionType.class) : EnumSet.copyOf(e)).orElse(null),
                         server_id, 
                         options, 
@@ -980,10 +982,11 @@ public class CommandHandler {
         var name = command.getName();
         var description = command.getDescription();
         var enabled_in_DMs = command.isEnabledInDms();
+        var nsfw = command.isNsfw();
 
         var options = command.getOptions().stream().map(this::parseFromSlashCommandOption).toList();
 
-        return new SlashCommandData(name, description, enabled_in_DMs, command.getDefaultRequiredPermissions().orElse(null), server_id, (List<SlashCommandOptionData<?>>) options, null, null, false);
+        return new SlashCommandData(name, description, enabled_in_DMs, nsfw, command.getDefaultRequiredPermissions().orElse(null), server_id, (List<SlashCommandOptionData<?>>) options, null, null, false);
     }
     @SuppressWarnings({"unchecked", "rawtypes"})
     private SlashCommandOptionData<?> parseFromSlashCommandOption(SlashCommandOption option) {
