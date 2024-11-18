@@ -254,7 +254,7 @@ Discord commands have a property called "Default Required Permissions" and it me
 in this library that's represented by annotating with `@RequiresPermissions()`, it takes an array of `PermissionType`s where any user must have all of them granted in order to execute the command
 
 ```java
-// in a commands class
+// in a commands class...
 @RequiresPermissions({ PermissionType.MANAGE_SERVER })
 @Command(name = "mewo", description = "mewo")
 void mewo() {}
