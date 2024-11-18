@@ -822,7 +822,7 @@ public class CommandHandler {
                             }
                         }
                     }
-                    if (permissions.isEmpty()) {
+                    if (permissions != null && permissions.isEmpty()) {
                         logger.info(() -> String.format("""
                                 Empty required permissions list at method %s.%s
                                 Discord will interpret this as requiring PermissionType.ADMINISTRATOR
@@ -832,7 +832,7 @@ public class CommandHandler {
                         name, 
                         description, 
                         (server_id == 0) && command.enabledInDMs(), 
-                        (permissions.isEmpty()) ? EnumSet.noneOf(PermissionType.class) : EnumSet.copyOf(permissions),
+                        Optional.ofNullable(permissions).map((e) -> (e.isEmpty()) ? EnumSet.noneOf(PermissionType.class) : EnumSet.copyOf(e)).orElse(null),
                         server_id, 
                         options, 
                         method,
@@ -920,7 +920,7 @@ public class CommandHandler {
                             }
                         }
                     }
-                    if (permissions.isEmpty()) {
+                    if (permissions != null && permissions.isEmpty()) {
                         logger.info(() -> String.format("""
                             Empty required permissions list at class %s
                             Discord will interpret this as requiring PermissionType.ADMINISTRATOR
@@ -930,7 +930,7 @@ public class CommandHandler {
                         name, 
                         description, 
                         (server_id == 0) && group_of_commands.enabledInDMs(), 
-                        (permissions.isEmpty()) ? EnumSet.noneOf(PermissionType.class) : EnumSet.copyOf(permissions),
+                        Optional.ofNullable(permissions).map((e) -> (e.isEmpty()) ? EnumSet.noneOf(PermissionType.class) : EnumSet.copyOf(e)).orElse(null),
                         server_id, 
                         options, 
                         null,
