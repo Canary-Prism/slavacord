@@ -852,7 +852,7 @@ public class CommandHandler {
                             constructor.setAccessible(true);
                             group_instance = constructor.newInstance();
                         } catch (NoSuchMethodException e) {
-                            throw new ParsingException("GroupOfCommands class must have a no-args constructor", "at class " + target.getName());
+                            throw new ParsingException("CommandGroup class must have a no-args constructor", "at class " + target.getName());
                         } catch (Exception e) {
                             throw new ParsingException("Exception while trying to instantiate class", "at class " + target.getName(), e);
                         }
@@ -862,7 +862,7 @@ public class CommandHandler {
                             constructor.setAccessible(true);
                             group_instance = constructor.newInstance(instance);
                         } catch (NoSuchMethodException e) {
-                            throw new ParsingException("GroupOfCommands class must have a no-args constructor", "at class " + target.getName());
+                            throw new ParsingException("CommandGroup class must have a no-args constructor", "at class " + target.getName());
                         } catch (Exception e) {
                             throw new ParsingException("Exception while trying to instantiate class", "at class " + target.getName(), e);
                         }
