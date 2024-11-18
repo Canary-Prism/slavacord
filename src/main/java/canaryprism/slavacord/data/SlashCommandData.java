@@ -34,7 +34,7 @@ public record SlashCommandData(
         String value = "";
 
         value += indent_str + "SlashCommandData [name = " + name + ", description = " + description
-                + ", enabled_in_DMs = " + enabled_in_DMs + ", server_id = " + server_id + ", requires_interaction = "
+                + ", enabled_in_DMs = " + enabled_in_DMs + ", nsfw = " + nsfw + ", required_permissions = " + required_permissions + ", server_id = " + server_id + ", requires_interaction = "
                 + requires_interaction + ", method = " + method + ", options = [";
         
 
