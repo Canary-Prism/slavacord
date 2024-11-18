@@ -11,6 +11,7 @@ import org.javacord.api.interaction.SlashCommandBuilder;
 public record SlashCommandData(
     String name,
     String description,
+    LocalizationData localizations,
     boolean enabled_in_DMs,
     boolean nsfw,
     EnumSet<PermissionType> required_permissions,
@@ -73,6 +74,9 @@ public record SlashCommandData(
 
         builder.setEnabledInDms(enabled_in_DMs);
         builder.setNsfw(nsfw);
+
+        localizations.names().forEach(builder::addNameLocalization);
+        localizations.descriptions().forEach(builder::addDescriptionLocalization);
 
         if (required_permissions != null) {
             builder.setDefaultEnabledForPermissions(required_permissions);

@@ -9,6 +9,7 @@ import org.javacord.api.interaction.SlashCommandOptionType;
 public record SlashCommandOptionData<T>(
     String name,
     String description,
+    LocalizationData localizations,
     boolean required,
     SlashCommandOptionType type,
     List<SlashCommandOptionData<?>> options,
@@ -78,6 +79,9 @@ public record SlashCommandOptionData<T>(
         builder.setDescription(description);
         builder.setRequired(required);
         builder.setType(type);
+
+        localizations.names().forEach(builder::addNameLocalization);
+        localizations.descriptions().forEach(builder::addDescriptionLocalization);
 
         if (options != null && !options.isEmpty()) {
             for (SlashCommandOptionData<?> option : options) {

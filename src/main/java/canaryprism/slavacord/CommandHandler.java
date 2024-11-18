@@ -31,6 +31,7 @@ import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.message.MessageFlag;
 import org.javacord.api.entity.permission.PermissionType;
 import org.javacord.api.event.interaction.SlashCommandCreateEvent;
+import org.javacord.api.interaction.DiscordLocale;
 import org.javacord.api.interaction.SlashCommand;
 import org.javacord.api.interaction.SlashCommandInteraction;
 import org.javacord.api.interaction.SlashCommandInteractionOptionsProvider;
@@ -649,6 +650,9 @@ public class CommandHandler {
                 var name = command.name();
                 var description = command.description();
 
+                var localizations = parseLocalizationData(method.getDeclaredAnnotationsByType(Trans.class), 
+                        "in method " + target.getName() + "." + method.getName());
+
                 boolean skip_next_interaction_parameter = false;
                 boolean requires_interaction = false;
                 try {
@@ -715,6 +719,10 @@ public class CommandHandler {
 
                         var option_name = option.name();
                         var option_description = option.description().isEmpty()? option_name : option.description();
+
+                        var option_localizations = parseLocalizationData(parameter.getDeclaredAnnotationsByType(Trans.class), 
+                                "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+
                         var option_required = !parameter.getParameterizedType().getTypeName().contains("java.util.Optional");
                         var option_string_choices = option.stringChoices();
                         var option_long_choices = option.longChoices();
@@ -732,6 +740,7 @@ public class CommandHandler {
                             options.add(new SlashCommandOptionData<String>(
                                 option_name, 
                                 option_description, 
+                                option_localizations,
                                 option_required, 
                                 option_type, 
                                 null, 
@@ -753,6 +762,7 @@ public class CommandHandler {
                             options.add(new SlashCommandOptionData<Long>(
                                 option_name, 
                                 option_description, 
+                                option_localizations,
                                 option_required, 
                                 option_type, 
                                 null, 
@@ -791,6 +801,7 @@ public class CommandHandler {
                             options.add(new SlashCommandOptionData<Enum<?>>(
                                 option_name, 
                                 option_description, 
+                                option_localizations,
                                 option_required, 
                                 option_type, 
                                 null, 
@@ -806,6 +817,7 @@ public class CommandHandler {
                             options.add(new SlashCommandOptionData<Long>(
                                 option_name, 
                                 option_description, 
+                                option_localizations,
                                 option_required, 
                                 option_type, 
                                 null, 
@@ -843,6 +855,7 @@ public class CommandHandler {
                     ((ArrayList<SlashCommandData>) target_list).add(new SlashCommandData(
                         name, 
                         description, 
+                        localizations,
                         (server_id == 0) && command.enabledInDMs(), 
                         command.nsfw(),
                         Optional.ofNullable(permissions).map((e) -> (e.isEmpty()) ? EnumSet.noneOf(PermissionType.class) : EnumSet.copyOf(e)).orElse(null),
@@ -867,6 +880,7 @@ public class CommandHandler {
                     ((ArrayList<SlashCommandOptionData<?>>) target_list).add(new SlashCommandOptionData<Long>(
                         name, 
                         description, 
+                        localizations,
                         false, 
                         org.javacord.api.interaction.SlashCommandOptionType.SUB_COMMAND, 
                         options, 
@@ -885,6 +899,9 @@ public class CommandHandler {
 
                 var name = group_of_commands.name();
                 var description = group_of_commands.description();
+
+                var localizations = parseLocalizationData(group.getDeclaredAnnotationsByType(Trans.class), 
+                        "at class " + target.getName());
 
                 if (description.isBlank()) {
                     description = name;
@@ -948,6 +965,7 @@ public class CommandHandler {
                     ((ArrayList<SlashCommandData>) target_list).add(new SlashCommandData(
                         name, 
                         description, 
+                        localizations, 
                         (server_id == 0) && group_of_commands.enabledInDMs(), 
                         group_of_commands.nsfw(),
                         Optional.ofNullable(permissions).map((e) -> (e.isEmpty()) ? EnumSet.noneOf(PermissionType.class) : EnumSet.copyOf(e)).orElse(null),
@@ -973,6 +991,7 @@ public class CommandHandler {
                     ((ArrayList<SlashCommandOptionData<?>>) target_list).add(new SlashCommandOptionData<Long>(
                         name, 
                         description, 
+                        localizations, 
                         false, 
                         org.javacord.api.interaction.SlashCommandOptionType.SUB_COMMAND_GROUP, 
                         options, 
@@ -989,26 +1008,57 @@ public class CommandHandler {
         }
     }
 
+    private LocalizationData parseLocalizationData(Trans[] translations, String parse_trace) {
+        var names = new HashMap<DiscordLocale, String>();
+        var descriptions = new HashMap<DiscordLocale, String>();
+
+        for (var translation : translations) {
+            var locale = translation.locale();
+            var name = translation.name();
+            var description = translation.description();
+
+            if (name.isEmpty() && description.isEmpty()) {
+                throw new ParsingException("Both name() and description() are empty in @Trans annotation for locale " + locale, parse_trace);
+            }
+            if (!name.isEmpty()) {
+                if (names.containsKey(locale)) {
+                    throw new ParsingException("Duplicate name() for locale " + locale + ", '" + names.get(locale) + "' and '" + name + "'", parse_trace);
+                }
+                names.put(translation.locale(), translation.name());
+            }
+            if (!description.isEmpty()) {
+                if (descriptions.containsKey(locale)) {
+                    throw new ParsingException("Duplicate description() for locale " + locale + ", '" + descriptions.get(locale) + "' and '" + description + "'", parse_trace);
+                }
+                descriptions.put(translation.locale(), translation.description());
+            }
+        }
+
+        return new LocalizationData(names, descriptions);
+    }
+
     @SuppressWarnings("unchecked")
     private SlashCommandData parseFromSlashCommand(SlashCommand command) {
         var name = command.getName();
         var description = command.getDescription();
+        var localizations = new LocalizationData(command.getNameLocalizations(), command.getDescriptionLocalizations());
         var enabled_in_DMs = command.isEnabledInDms();
         var nsfw = command.isNsfw();
 
         var options = command.getOptions().stream().map(this::parseFromSlashCommandOption).toList();
 
-        return new SlashCommandData(name, description, enabled_in_DMs, nsfw, command.getDefaultRequiredPermissions().orElse(null), server_id, (List<SlashCommandOptionData<?>>) options, null, null, false);
+        return new SlashCommandData(name, description, localizations, enabled_in_DMs, nsfw, command.getDefaultRequiredPermissions().orElse(null), server_id, (List<SlashCommandOptionData<?>>) options, null, null, false);
     }
     @SuppressWarnings({"unchecked", "rawtypes"})
     private SlashCommandOptionData<?> parseFromSlashCommandOption(SlashCommandOption option) {
         var name = option.getName();
         var description = option.getDescription();
+        var localizations = new LocalizationData(option.getNameLocalizations(), option.getDescriptionLocalizations());
         var required = option.isRequired();
         var type = option.getType();
         var options = option.getOptions().stream().map(this::parseFromSlashCommandOption).toList();
         var choices = option.getChoices().stream().map(this::parseFromSlashCommandOptionChoice).toList();
-        return new SlashCommandOptionData(name, description, required, type, options, choices, null, null, false, false);
+        return new SlashCommandOptionData(name, description, localizations, required, type, options, choices, null, null, false, false);
     }
     private SlashCommandOptionChoiceData<?> parseFromSlashCommandOptionChoice(SlashCommandOptionChoice choice) {
         var name = choice.getName();
