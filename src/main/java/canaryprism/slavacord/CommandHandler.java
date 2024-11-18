@@ -686,10 +686,8 @@ public class CommandHandler {
                                 "enum"
                         ) {
                             case "java.lang.String" -> org.javacord.api.interaction.SlashCommandOptionType.STRING;
-                            case "long" -> org.javacord.api.interaction.SlashCommandOptionType.LONG;
-                            case "java.lang.Long" -> org.javacord.api.interaction.SlashCommandOptionType.LONG;
-                            case "boolean" -> org.javacord.api.interaction.SlashCommandOptionType.BOOLEAN;
-                            case "java.lang.Boolean" -> org.javacord.api.interaction.SlashCommandOptionType.BOOLEAN;
+                            case "long", "java.lang.Long" -> org.javacord.api.interaction.SlashCommandOptionType.LONG;
+                            case "boolean", "java.lang.Boolean" -> org.javacord.api.interaction.SlashCommandOptionType.BOOLEAN;
                             case "org.javacord.api.entity.user.User" -> org.javacord.api.interaction.SlashCommandOptionType.USER;
                             case "org.javacord.api.entity.channel.ServerChannel" -> org.javacord.api.interaction.SlashCommandOptionType.CHANNEL;
                             case "org.javacord.api.entity.Role" -> org.javacord.api.interaction.SlashCommandOptionType.ROLE;
