@@ -66,6 +66,8 @@ public record SlashCommandData(
         builder.setName(name);
         builder.setDescription(description);
 
+        builder.setEnabledInDms(enabled_in_DMs);
+
         if (options != null && options.size() > 0) {
             for (SlashCommandOptionData<?> option : options) {
                 builder.addOption(option.toSlashCommandOptionBuilder().build());
