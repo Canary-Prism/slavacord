@@ -284,6 +284,81 @@ discord counts a command as "failed" if the bot has failed to submit a response 
 
 it instead uses a RespondLater, which tells discord that the command *has* gone through it just needs a bit before a proper response can be sent (in discord this is represented by the "BotName is thinking..." text)
 
+### Locales
+
+#### for Commands CommandGroups and Options
+you can add a localised name and/or description for a command or command group or option using the `@Trans` annotation (the Trans stands for Translation)
+```java
+// in a commands class...
+
+@Trans(locale = DiscordLocale.CHINESE_TAIWAN, description = "貓")
+@Trans(locale = DiscordLocale.JAPANESE, description = "ねこ")
+@CommandGroup(name = "kitty", description = "cat")
+class Kitty {
+    @Trans(locale = DiscordLocale.CHINESE_TAIWAN, name = "喵", description = "馬卡龍")
+    @Trans(locale = DiscordLocale.JAPANESE, name = "にゃー", description = "マカロン")
+    @Command(name = "meow", description = "macaron")
+    void meow(
+        @Trans(locale = DiscordLocale.CHINESE_TAIWAN, name = "使用者")
+        @Trans(locale = DiscordLocale.JAPANESE, name = "ユーザー")
+        @Option(name = "user") User user
+    ) {}
+}
+```
+
+for each annotation you are allowed to only provide the name or description or both. if the user's locale isn't in the provided localised names or options the default names and descriptions specified by the `@Command` or `@CommandGroup` or `@Option` annotation will be displayed
+
+#### for OptionChoices
+
+you can use `@OptionChoiceString` and `@OptionChoiceLong`'s `translations` property and set it to an array of `@OptionChoiceTrans` like so
+```java
+// in command method parameter list..
+@Option(name = "number", longChoices = {
+    @OptionChoiceLong(name = "zero", value = 0, translations = {
+        @OptionChoiceTrans(locale = DiscordLocale.CHINESE_TAIWAN, value = "零")
+        @OptionChoiceTrans(locale = DiscordLocale.JAPANESE, value = "ゼロ")
+    }),
+    @OptionChoiceLong(name = "one", value = 1, translations = {
+        @OptionChoiceTrans(locale = DiscordLocale.CHINESE_TAIWAN, value = "ㄧ")
+        @OptionChoiceTrans(locale = DiscordLocale.JAPANESE, value = "いち")
+    })
+}) long number
+```
+
+or if you're using an enum (recommended), you can implement `CustomChoiceName`'s `getCustomNameTranslations()` method
+```java
+// anywhere
+enum Numbers implements CustomChoiceName {
+    ZERO, ONE;
+
+    @Override
+    public String getCustomName() {
+        return switch (this) {
+            case ZERO -> "zero";
+            case ONE -> "one";
+        };
+    }
+
+    @Override
+    public Map<DiscordLocale, String> getCustomNameTranslations() {
+        return switch (this) {
+            case ZERO -> Map.of(
+                DiscordLocale.CHINESE_TAIWAN, "零",
+                DiscordLocale.JAPANESE, "ゼロ"
+            );
+            case ONE -> Map.of(
+                DiscordLocale.CHINESE_TAIWAN, "一",
+                DiscordLocale.JAPANESE, "いち"
+            );
+        };
+    }
+}
+```
+```java
+// in command method parameter list..
+@Option(name = "number") Numbers number
+```
+
 ### Parsing Exception
 
 this library throws ParsingException for issues relating to the conversion of your `Commands` class and its command methods and command group classes. 
