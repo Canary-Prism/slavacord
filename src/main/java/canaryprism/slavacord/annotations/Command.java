@@ -24,6 +24,7 @@ public @interface Command {
 
     /**
      * Whether the command can be executed in a direct message with the bot.
+     * <p><strong>NOTE: this will only take effect on root commands (not nested)</strong></p>
      * @return Whether the command can be executed in a direct message with the bot.
      */
     boolean enabledInDMs() default true;

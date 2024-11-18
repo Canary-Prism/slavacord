@@ -845,6 +845,12 @@ public class CommandHandler {
                         throw new ParsingException("@RequiresPermissions is not allowed in nested commands or command groups", 
                             "in method " + target.getName() + "." + method.getName());
                     }
+                    if (!command.enabledInDMs()) {
+                        logger.error(() -> String.format("""
+                            enabledInDMs = false has no effect in nested commands or command groups, this will become an exception later
+                                in method %s.%s
+                            """, target.getName(), method.getName()));
+                    }
                     ((ArrayList<SlashCommandOptionData<?>>) target_list).add(new SlashCommandOptionData<Long>(
                         name, 
                         description, 
@@ -943,6 +949,12 @@ public class CommandHandler {
                         throw new ParsingException(
                                 "@RequiresPermissions is not allowed in nested commands or command groups",
                                 "at class " + target.getName());
+                    }
+                    if (!group_of_commands.enabledInDMs()) {
+                        logger.error(() -> String.format("""
+                            enabledInDMs = false has no effect in nested commands or command groups, this will become an exception later
+                                at class %s
+                            """, target.getName()));
                     }
                     ((ArrayList<SlashCommandOptionData<?>>) target_list).add(new SlashCommandOptionData<Long>(
                         name, 
