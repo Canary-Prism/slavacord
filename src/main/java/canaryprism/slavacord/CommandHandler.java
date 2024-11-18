@@ -204,7 +204,9 @@ public class CommandHandler {
                                     var responder = interaction.respondLater(returns_response.ephemeral()).join();
                                     Object returned = handle.invokeWithArguments(parameters);
 
-                                    if (returned != null && !((String)returned).isBlank()) {
+                                    var opt_text = getReturnedResponse(method.getGenericReturnType(), returned);
+                                    if (opt_text.isPresent()) {
+                                        var text = opt_text.get();
 
                                         if (returns_response.ephemeral()) {
                                             responder.setFlags(MessageFlag.EPHEMERAL);
@@ -214,7 +216,7 @@ public class CommandHandler {
                                         }
 
                                         if (returns_response.splitOnLimit()) {
-                                            var split = splitString((String)returned, 2000);
+                                            var split = splitString(text, 2000);
                                             responder.setContent(split[0]);
                                             responder.update().join();
 
@@ -233,10 +235,9 @@ public class CommandHandler {
                                             }
 
                                         } else {
-                                            responder.setContent((String)returned);
+                                            responder.setContent(text);
                                             responder.update().join();
                                         }
-
                                     }
                                 } else {
                                     Object returned = handle.invokeWithArguments(parameters);
@@ -328,17 +329,16 @@ public class CommandHandler {
         return results.toArray(String[]::new);
     }
 
-    private void processImmediateRespond(SlashCommandInteraction interaction, ReturnsResponse returns_response, Type return_type, Object returned) {
-
+    private Optional<String> getReturnedResponse(Type return_type, Object returned) {
         String text;
 
         if (return_type.equals(String.class)) {
-            var str = (String)returned;
+            var str = (String) returned;
             if (str == null) {
-                return; // we don't respond if the returned string is null
+                return Optional.empty(); // we don't respond if the returned string is null
             }
             if (str.isBlank()) {
-                /* 
+                /*
                  * if the returned string is blank, we don't respond
                  * this is because you can't even send a blank message to discord
                  * this is technically a valid way to not respond to a command
@@ -347,30 +347,42 @@ public class CommandHandler {
                  */
 
                 logger.warn("""
-                    Command with @ReturnsResponse returned a blank string! 
+                    Command with @ReturnsResponse returned a blank string!
                     CommandHandler will interpret this as returning without responding to the interaction FOR NOW, but this is likely a developer error.
                     prefer returning null or an empty Optional<String> instead of a blank string to not respond to the interaction.
                     """);
 
-                return;
+                return Optional.empty();
             }
 
             text = str;
         } else if (return_type.equals(OPTIONAL_OF_STRING)) {
-            var opt = (Optional<?>)returned;
+            var opt = (Optional<?>) returned;
             if (opt == null) {
                 // an Optional implies a contract that it will never be null
                 // this will not be treated as a valid value
                 throw new IllegalArgumentException("Invalid return value for @ReturnsResponse. you may not return a null Optional");
             }
             if (opt.isEmpty()) {
-                return; // we don't respond if the returned optional is empty
+                return Optional.empty(); // we don't respond if the returned optional is empty
             }
 
-            text = (String)opt.get();
+            text = (String) opt.get();
         } else {
             throw new IllegalArgumentException("Invalid return type for @ReturnsResponse"); // this should never happen
         }
+
+        return Optional.of(text);
+    }
+
+    private void processImmediateRespond(SlashCommandInteraction interaction, ReturnsResponse returns_response, Type return_type, Object returned) {
+
+        var opt_text = getReturnedResponse(return_type, returned);
+        if (opt_text.isEmpty()) {
+            return;
+        }
+        
+        var text = opt_text.get();
 
         var responder = interaction.createImmediateResponder();
 
