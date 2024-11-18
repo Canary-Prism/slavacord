@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.3.0
+- added nsfw flag to commands and command group (not applicable to nested commands and command groups)
+- warn setting `setEnabledInDMs` in nested commands and command groups
+- updated RespondLater ReturnResponses to act like ImmediateResponders
+- added the ability to set localizations for commannds and commnand groups and options and option choices
+- added `getCustomNameTranslations()` method to `CustomChoiceName`
+
 ## v2.2.0
 - added `@RequiresPermissions` annotation to interface with discord's default required permissions
 - added support for the `DECIMAL` or `NUMBER` option type (whoops gues i just missed it all this time)
