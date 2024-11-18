@@ -4,11 +4,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Optional;
 
+import org.javacord.api.interaction.DiscordLocale;
 import org.junit.jupiter.api.Test;
 
 import canaryprism.slavacord.annotations.Command;
 import canaryprism.slavacord.annotations.CreateGlobal;
 import canaryprism.slavacord.annotations.ReturnsResponse;
+import canaryprism.slavacord.annotations.Trans;
 import canaryprism.slavacord.exceptions.ParsingException;
 import canaryprism.slavacord.mock.MockDiscordApi;
 
