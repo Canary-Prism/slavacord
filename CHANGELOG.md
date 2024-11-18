@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.2.0
+- added `@RequiresPermissions` annotation to interface with discord's default required permissions
+- added support for the `DECIMAL` or `NUMBER` option type (whoops gues i just missed it all this time)
+
 ## v2.1.2
 - changed dependencies slightly... i don't even know what was happening
 
