@@ -132,6 +132,8 @@ here is a list of types that are supported by discord and this library:
 - `java.lang.String`
 - `long`
 - `java.lang.Long`
+- `double`
+- `java.lang.Double`
 - `boolean`
 - `java.lang.Boolean`
 - `org.javacord.api.entity.user.User`
