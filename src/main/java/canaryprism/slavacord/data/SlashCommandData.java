@@ -1,15 +1,18 @@
 package canaryprism.slavacord.data;
 
 import java.lang.reflect.Method;
-
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
 
+import org.javacord.api.entity.permission.PermissionType;
 import org.javacord.api.interaction.SlashCommandBuilder;
 
 public record SlashCommandData(
     String name,
     String description,
     boolean enabled_in_DMs,
+    EnumSet<PermissionType> required_permissions,
     /**
      * The server ID to register the command in. (0 for global)
      */
@@ -54,6 +57,7 @@ public record SlashCommandData(
 
             return name.equals(other.name) && description.equals(other.description)
                     && enabled_in_DMs == other.enabled_in_DMs && server_id == other.server_id
+                    && Objects.equals(required_permissions, other.required_permissions)
                     && (((options == null || options.isEmpty()) && (other.options() == null || other.options().isEmpty())) || options.equals(other.options));
         } else {
             return false;
@@ -67,6 +71,10 @@ public record SlashCommandData(
         builder.setDescription(description);
 
         builder.setEnabledInDms(enabled_in_DMs);
+
+        if (required_permissions != null) {
+            builder.setDefaultEnabledForPermissions(required_permissions);
+        }
 
         if (options != null && options.size() > 0) {
             for (SlashCommandOptionData<?> option : options) {

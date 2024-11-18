@@ -5,13 +5,16 @@ package canaryprism.slavacord;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.lang.annotation.Annotation;
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -26,6 +29,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.message.MessageFlag;
+import org.javacord.api.entity.permission.PermissionType;
 import org.javacord.api.event.interaction.SlashCommandCreateEvent;
 import org.javacord.api.interaction.SlashCommand;
 import org.javacord.api.interaction.SlashCommandInteraction;
@@ -176,7 +180,7 @@ public class CommandHandler {
                     }
                 }
 
-                final Async async = isAsyncRecursive(method);
+                final Async async = getAnnotationRecursive(method, Async.class);
                 final ReturnsResponse returns_response = method.getDeclaredAnnotation(ReturnsResponse.class);
 
                 if (async == null) {
@@ -399,15 +403,15 @@ public class CommandHandler {
         }
     }
 
-    private Async isAsyncRecursive(Method method) {
-        if (method.getDeclaredAnnotation(Async.class) != null) {
-            return method.getDeclaredAnnotation(Async.class);
+    private <T extends Annotation> T getAnnotationRecursive(Method method, Class<T> annotation_type) {
+        if (method.getDeclaredAnnotation(annotation_type) != null) {
+            return method.getDeclaredAnnotation(annotation_type);
         }
         var enclosing = method.getDeclaringClass();
         var root = Commands.class;
         while (enclosing != null && !root.isInstance(enclosing)) {
-            if (enclosing.getDeclaredAnnotation(Async.class) != null) {
-                return enclosing.getDeclaredAnnotation(Async.class);
+            if (enclosing.getDeclaredAnnotation(annotation_type) != null) {
+                return enclosing.getDeclaredAnnotation(annotation_type);
             }
             enclosing = enclosing.getEnclosingClass();
         }
@@ -803,10 +807,25 @@ public class CommandHandler {
                     throw e.addParseTrace("in method " + target.getName() + "." + method.getName());
                 }
                 if (depth == 0) {
+                    var requires_permissions = method.getDeclaredAnnotation(RequiresPermissions.class);
+                    HashSet<PermissionType> permissions = null;
+                    if (requires_permissions != null) {
+                        permissions = new HashSet<>();
+                        for (var e : requires_permissions.value()) {
+                            var success = permissions.add(e);
+                            if (!success) {
+                                logger.warn(() -> String.format("""
+                                        Duplicate required permissions found %s in method %s.%s !!
+                                        ignoring duplicate
+                                        """, e, target.getName(), method.getName()));
+                            }
+                        }
+                    }
                     ((ArrayList<SlashCommandData>) target_list).add(new SlashCommandData(
                         name, 
                         description, 
                         (server_id == 0) && command.enabledInDMs(), 
+                        (permissions.isEmpty()) ? EnumSet.noneOf(PermissionType.class) : EnumSet.copyOf(permissions),
                         server_id, 
                         options, 
                         method,
@@ -814,6 +833,11 @@ public class CommandHandler {
                         requires_interaction
                     ));
                 } else {
+                    if (method.getDeclaredAnnotation(RequiresPermissions.class) != null) {
+                        // not allowed here
+                        throw new ParsingException("@RequiresPermissions is not allowed in nested commands or command groups", 
+                            "in method " + target.getName() + "." + method.getName());
+                    }
                     ((ArrayList<SlashCommandOptionData<?>>) target_list).add(new SlashCommandOptionData<Long>(
                         name, 
                         description, 
@@ -875,10 +899,25 @@ public class CommandHandler {
                 parseFromClass(group_instance, group, depth + 1, options);
 
                 if (depth == 0) {
+                    var requires_permissions = target.getDeclaredAnnotation(RequiresPermissions.class);
+                    HashSet<PermissionType> permissions = null;
+                    if (requires_permissions != null) {
+                        permissions = new HashSet<>();
+                        for (var e : requires_permissions.value()) {
+                            var success = permissions.add(e);
+                            if (!success) {
+                                logger.warn(() -> String.format("""
+                                        Duplicate required permissions found %s at class %s !!
+                                        ignoring duplicate
+                                        """, e, target.getName()));
+                            }
+                        }
+                    }
                     ((ArrayList<SlashCommandData>) target_list).add(new SlashCommandData(
                         name, 
                         description, 
                         (server_id == 0) && group_of_commands.enabledInDMs(), 
+                        (permissions.isEmpty()) ? EnumSet.noneOf(PermissionType.class) : EnumSet.copyOf(permissions),
                         server_id, 
                         options, 
                         null,
@@ -886,6 +925,12 @@ public class CommandHandler {
                         true
                     ));
                 } else {
+                    if (target.getDeclaredAnnotation(RequiresPermissions.class) != null) {
+                        // not allowed here
+                        throw new ParsingException(
+                                "@RequiresPermissions is not allowed in nested commands or command groups",
+                                "at class " + target.getName());
+                    }
                     ((ArrayList<SlashCommandOptionData<?>>) target_list).add(new SlashCommandOptionData<Long>(
                         name, 
                         description, 
@@ -913,7 +958,7 @@ public class CommandHandler {
 
         var options = command.getOptions().stream().map(this::parseFromSlashCommandOption).toList();
 
-        return new SlashCommandData(name, description, enabled_in_DMs, server_id, (List<SlashCommandOptionData<?>>) options, null, null, false);
+        return new SlashCommandData(name, description, enabled_in_DMs, command.getDefaultRequiredPermissions().orElse(null), server_id, (List<SlashCommandOptionData<?>>) options, null, null, false);
     }
     @SuppressWarnings({"unchecked", "rawtypes"})
     private SlashCommandOptionData<?> parseFromSlashCommandOption(SlashCommandOption option) {
