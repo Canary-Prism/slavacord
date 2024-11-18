@@ -577,6 +577,15 @@ public class CommandHandler {
         }
     }
 
+    private static final MethodHandle custom_name_translations_getter;
+    static {
+        try {
+            custom_name_translations_getter = MethodHandles.lookup().findVirtual(CustomChoiceName.class, "getCustomNameTranslations", MethodType.methodType(Map.class));
+        } catch (Exception e) {
+            throw new NoSuchElementException(e); // this should never happen
+        }
+    }
+
     private static final ParameterizedType OPTIONAL_OF_STRING = new ParameterizedType() {
         @Override
         public Type[] getActualTypeArguments() {
@@ -735,7 +744,11 @@ public class CommandHandler {
                                 throw new ParsingException("Option Choices type does not match parameter", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
                             }
                             for (var choice : option_string_choices) {
-                                optionchoices.add(new SlashCommandOptionChoiceData<String>(choice.name().equals("")? choice.value() : choice.name(), choice.value()));
+                                optionchoices.add(new SlashCommandOptionChoiceData<String>(
+                                    choice.name().equals("")? choice.value() : choice.name(), 
+                                    choice.value(),
+                                    parseOptionChoiceTranslations(choice.translations(), "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")")
+                                ));
                             }
                             options.add(new SlashCommandOptionData<String>(
                                 option_name, 
@@ -757,7 +770,11 @@ public class CommandHandler {
                                 throw new ParsingException("Invalid option choice type at parameter " + parameter.getName() + " in method " + method.getName(), "at class " + target.getName());
                             }
                             for (var choice : option_long_choices) {
-                                optionchoices.add(new SlashCommandOptionChoiceData<Long>(choice.name(), choice.value()));
+                                optionchoices.add(new SlashCommandOptionChoiceData<Long>(
+                                    choice.name(), 
+                                    choice.value(),
+                                    parseOptionChoiceTranslations(choice.translations(), "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")")
+                                ));
                             }
                             options.add(new SlashCommandOptionData<Long>(
                                 option_name, 
@@ -788,14 +805,15 @@ public class CommandHandler {
                                         if (choicename.length() > 25) {
                                             throw new ParsingException("CustomChoiceName.getCustomName() must return a string with a length of 25 characters or less", "at class " + target.getName());
                                         }
-                                        optionchoices.add(new SlashCommandOptionChoiceData<Enum<?>>(choicename, ((Enum<?>)choice)));
+                                        var choice_localizations = Map.copyOf((Map<DiscordLocale, String>)custom_name_translations_getter.invoke(choice));
+                                        optionchoices.add(new SlashCommandOptionChoiceData<Enum<?>>(choicename, ((Enum<?>)choice), choice_localizations));
                                     } catch (Throwable e) {
                                         throw new ParsingException("Exception while trying to get custom name", "at class " + target.getName(), e);
                                     }
                                 }
                             } else {
                                 for (var choice : inner_class.getEnumConstants()) {
-                                    optionchoices.add(new SlashCommandOptionChoiceData<Enum<?>>(choice.toString().replaceAll("(?<=.{25}).", ""), ((Enum<?>)choice)));
+                                    optionchoices.add(new SlashCommandOptionChoiceData<Enum<?>>(choice.toString().replaceAll("(?<=.{25}).", ""), ((Enum<?>)choice), Map.of()));
                                 }
                             }
                             options.add(new SlashCommandOptionData<Enum<?>>(
@@ -1037,6 +1055,25 @@ public class CommandHandler {
         return new LocalizationData(names, descriptions);
     }
 
+    private Map<DiscordLocale, String> parseOptionChoiceTranslations(OptionChoiceTrans[] translations, String parse_trace) {
+        var map = new HashMap<DiscordLocale, String>();
+
+        for (var translation : translations) {
+            var locale = translation.locale();
+            var value = translation.value();
+
+            if (value.isEmpty()) {
+                throw new ParsingException("value() is empty in @OptionChoiceTrans annotation for locale " + locale, parse_trace);
+            }
+            if (map.containsKey(locale)) {
+                throw new ParsingException("Duplicate value() for locale " + locale + ", '" + map.get(locale) + "' and '" + value + "'", parse_trace);
+            }
+            map.put(locale, value);
+        }
+
+        return map;
+    }
+
     @SuppressWarnings("unchecked")
     private SlashCommandData parseFromSlashCommand(SlashCommand command) {
         var name = command.getName();
@@ -1063,9 +1100,9 @@ public class CommandHandler {
     private SlashCommandOptionChoiceData<?> parseFromSlashCommandOptionChoice(SlashCommandOptionChoice choice) {
         var name = choice.getName();
         if (choice.getLongValue().isPresent()) {
-            return new SlashCommandOptionChoiceData<Long>(name, choice.getLongValue().get());
+            return new SlashCommandOptionChoiceData<Long>(name, choice.getLongValue().get(), choice.getNameLocalizations());
         } else if (choice.getStringValue().isPresent()) {
-            return new SlashCommandOptionChoiceData<String>(name, choice.getStringValue().get());
+            return new SlashCommandOptionChoiceData<String>(name, choice.getStringValue().get(), choice.getNameLocalizations());
         } else {
             throw new IllegalArgumentException("SlashCommandOptionChoice from server has neither a long value nor a string value");
         }

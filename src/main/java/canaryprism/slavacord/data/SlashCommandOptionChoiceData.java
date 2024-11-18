@@ -1,10 +1,14 @@
 package canaryprism.slavacord.data;
 
+import java.util.Map;
+
+import org.javacord.api.interaction.DiscordLocale;
 import org.javacord.api.interaction.SlashCommandOptionChoiceBuilder;
 
 public record SlashCommandOptionChoiceData<T>(
     String name,
-    T value
+    T value,
+    Map<DiscordLocale, String> localizations
 ) implements Data {
     @Override
     public String toString() {
@@ -16,14 +20,21 @@ public record SlashCommandOptionChoiceData<T>(
     }
 
     public SlashCommandOptionChoiceBuilder toSlashCommandOptionChoiceBuilder() {
+        SlashCommandOptionChoiceBuilder builder;
         if (value instanceof String) {
-            return new SlashCommandOptionChoiceBuilder().setName(name).setValue((String) value);
+            builder = new SlashCommandOptionChoiceBuilder().setValue((String) value);
         } else if (value instanceof Long) {
-            return new SlashCommandOptionChoiceBuilder().setName(name).setValue((long) value);
+            builder = new SlashCommandOptionChoiceBuilder().setValue((long) value);
         } else if (value.getClass().isEnum()) {
-            return new SlashCommandOptionChoiceBuilder().setName(name).setValue(((Enum<?>)value).ordinal());
+            builder = new SlashCommandOptionChoiceBuilder().setValue(((Enum<?>)value).ordinal());
         } else {
             throw new IllegalArgumentException("Invalid type for SlashCommandOptionChoiceData.value: " + value.getClass());
         }
+
+        builder.setName(name);
+
+        localizations.forEach(builder::addNameLocalization);
+
+        return builder;
     }
 }
