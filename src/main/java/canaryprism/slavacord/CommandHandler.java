@@ -821,6 +821,12 @@ public class CommandHandler {
                             }
                         }
                     }
+                    if (permissions.isEmpty()) {
+                        logger.info(() -> String.format("""
+                                Empty required permissions list at method %s.%s
+                                Discord will interpret this as requiring PermissionType.ADMINISTRATOR
+                                """, target.getName(), method.getName()));
+                    }
                     ((ArrayList<SlashCommandData>) target_list).add(new SlashCommandData(
                         name, 
                         description, 
@@ -912,6 +918,12 @@ public class CommandHandler {
                                         """, e, target.getName()));
                             }
                         }
+                    }
+                    if (permissions.isEmpty()) {
+                        logger.info(() -> String.format("""
+                            Empty required permissions list at class %s
+                            Discord will interpret this as requiring PermissionType.ADMINISTRATOR
+                            """, target.getName()));
                     }
                     ((ArrayList<SlashCommandData>) target_list).add(new SlashCommandData(
                         name, 
