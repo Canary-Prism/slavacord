@@ -137,6 +137,7 @@ public class CommandHandler {
                                 switch (option_type) {
                                     case STRING -> parameters.add(interaction_options.getArgumentStringValueByName(options.get(i).name()).get());
                                     case LONG -> parameters.add(interaction_options.getArgumentLongValueByName(options.get(i).name()).get());
+                                    case DECIMAL -> parameters.add(interaction_options.getArgumentDecimalValueByName(options.get(i).name()));
                                     case BOOLEAN -> parameters.add(interaction_options.getArgumentBooleanValueByName(options.get(i).name()).get());
                                     case USER -> parameters.add(interaction_options.getArgumentUserValueByName(options.get(i).name()).get());
                                     case CHANNEL -> parameters.add(interaction_options.getArgumentChannelValueByName(options.get(i).name()).get());
@@ -148,6 +149,7 @@ public class CommandHandler {
                                 switch (option_type) {
                                     case STRING -> parameters.add(interaction_options.getArgumentStringValueByName(options.get(i).name()));
                                     case LONG -> parameters.add(interaction_options.getArgumentLongValueByName(options.get(i).name()));
+                                    case DECIMAL -> parameters.add(interaction_options.getArgumentDecimalValueByName(options.get(i).name()));
                                     case BOOLEAN -> parameters.add(interaction_options.getArgumentBooleanValueByName(options.get(i).name()));
                                     case USER -> parameters.add(interaction_options.getArgumentUserValueByName(options.get(i).name()));
                                     case CHANNEL -> parameters.add(interaction_options.getArgumentChannelValueByName(options.get(i).name()));
@@ -687,6 +689,7 @@ public class CommandHandler {
                         ) {
                             case "java.lang.String" -> org.javacord.api.interaction.SlashCommandOptionType.STRING;
                             case "long", "java.lang.Long" -> org.javacord.api.interaction.SlashCommandOptionType.LONG;
+                            case "double", "java.lang.Double" -> org.javacord.api.interaction.SlashCommandOptionType.DECIMAL;
                             case "boolean", "java.lang.Boolean" -> org.javacord.api.interaction.SlashCommandOptionType.BOOLEAN;
                             case "org.javacord.api.entity.user.User" -> org.javacord.api.interaction.SlashCommandOptionType.USER;
                             case "org.javacord.api.entity.channel.ServerChannel" -> org.javacord.api.interaction.SlashCommandOptionType.CHANNEL;
