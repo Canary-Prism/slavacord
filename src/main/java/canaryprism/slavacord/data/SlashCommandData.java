@@ -57,7 +57,7 @@ public record SlashCommandData(
             SlashCommandData other = (SlashCommandData) obj;
 
             return name.equals(other.name) && description.equals(other.description)
-                    && enabled_in_DMs == other.enabled_in_DMs && server_id == other.server_id
+                    && enabled_in_DMs == other.enabled_in_DMs && nsfw == other.nsfw && server_id == other.server_id
                     && Objects.equals(required_permissions, other.required_permissions)
                     && (((options == null || options.isEmpty()) && (other.options() == null || other.options().isEmpty())) || options.equals(other.options));
         } else {
