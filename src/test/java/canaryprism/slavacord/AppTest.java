@@ -49,6 +49,8 @@ public class AppTest {
 
         @CreateGlobal
         class Mewo implements Commands {
+            @Trans(locale = DiscordLocale.CHINESE_TAIWAN, name = "mewo", description = "mewo")
+            @Trans(locale = DiscordLocale.JAPANESE, name = "mewo", description = "mewo")
             @ReturnsResponse
             @Command(name = "mewo", description = "mewo")
             public String mewo(String nya) {
