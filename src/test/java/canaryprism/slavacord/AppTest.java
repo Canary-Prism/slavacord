@@ -2,6 +2,7 @@ package canaryprism.slavacord;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.javacord.api.interaction.DiscordLocale;
@@ -9,8 +10,12 @@ import org.junit.jupiter.api.Test;
 
 import canaryprism.slavacord.annotations.Command;
 import canaryprism.slavacord.annotations.CreateGlobal;
+import canaryprism.slavacord.annotations.Option;
 import canaryprism.slavacord.annotations.ReturnsResponse;
 import canaryprism.slavacord.annotations.Trans;
+import canaryprism.slavacord.autocomplete.AutocompleteSuggestion;
+import canaryprism.slavacord.autocomplete.annotations.Autocompleter;
+import canaryprism.slavacord.autocomplete.annotations.Autocompletes;
 import canaryprism.slavacord.exceptions.ParsingException;
 import canaryprism.slavacord.mock.MockDiscordApi;
 
@@ -113,5 +118,25 @@ public class AppTest {
         } catch (ParsingException e) {
             // do nothing
         }
+    }
+
+    @Test
+    public void autoCompleteParsingTest() {
+        var handler = new CommandHandler(new MockDiscordApi());
+
+        @CreateGlobal
+        class Mewo implements Commands {
+            @Command(name = "mewo", description = "mewo")
+            public void mewo(@Autocompletes(supplierMethod = "autocompleter") @Option(name = "nya", description = "nya") String nya) {
+                // do nothing
+            }
+
+            @Autocompleter
+            public List<AutocompleteSuggestion<String>> autocompleter(String nya) {
+                return null;
+            }
+        }
+
+        handler.register(new Mewo(), false);
     }
 }
