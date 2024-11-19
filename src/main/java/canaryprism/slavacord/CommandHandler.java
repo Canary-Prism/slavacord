@@ -144,7 +144,9 @@ public class CommandHandler {
                                 case CHANNEL -> interaction_options.getArgumentChannelValueByName(option_name);
                                 case ROLE -> interaction_options.getArgumentRoleValueByName(option_name);
                                 case MENTIONABLE -> interaction_options.getArgumentMentionableValueByName(option_name);
-                                default -> throw new IllegalArgumentException("Invalid option type");
+                                case ATTACHMENT -> interaction_options.getArgumentAttachmentValueByName(option_name);
+                                case SUB_COMMAND, SUB_COMMAND_GROUP -> throw new IllegalArgumentException("Unexpected SUB_COMMAND/SUB_COMMAND_GROUP in option parser");
+                                case UNKNOWN -> throw new IllegalArgumentException("Unknown Option Type");
                             };
                             if (is_required)
                                 parameters.add(opt_value.get());
@@ -712,6 +714,7 @@ public class CommandHandler {
                             case "org.javacord.api.entity.channel.ServerChannel" -> org.javacord.api.interaction.SlashCommandOptionType.CHANNEL;
                             case "org.javacord.api.entity.Role" -> org.javacord.api.interaction.SlashCommandOptionType.ROLE;
                             case "org.javacord.api.entity.Mentionable" -> org.javacord.api.interaction.SlashCommandOptionType.MENTIONABLE;
+                            case "org.javacord.api.entity.Attachment" -> org.javacord.api.interaction.SlashCommandOptionType.ATTACHMENT;
 
                             case "enum" -> org.javacord.api.interaction.SlashCommandOptionType.LONG;
 
