@@ -943,15 +943,15 @@ public class CommandHandler {
                                     AutocompletableData data;
                                     if (supplier_class_is_target) {
                                         if (Modifier.isStatic(supplier_method.getModifiers())) {
-                                            data = new AutocompletableData(supplier_method, null, type, requires_interaction);
+                                            data = new AutocompletableData(supplier_method, null, type, supplier_requires_interaction);
                                         } else {
-                                            data = new AutocompletableData(supplier_method, instance, type, requires_interaction);
+                                            data = new AutocompletableData(supplier_method, instance, type, supplier_requires_interaction);
                                         }
                                     } else {
                                         if (!Modifier.isStatic(supplier_method.getModifiers())) {
                                             throw new ParsingException("Autocomplete supplier method must be static if not in the same class", "in method " + supplier_class.getName() + "." + supplier_method_name + "(" + actual_class.getSimpleName() + ")");
                                         }
-                                        data = new AutocompletableData(supplier_method, null, type, requires_interaction);
+                                        data = new AutocompletableData(supplier_method, null, type, supplier_requires_interaction);
                                     }
 
                                     options.add(new SlashCommandOptionData<String>(
