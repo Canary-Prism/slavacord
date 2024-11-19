@@ -22,7 +22,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
@@ -40,7 +39,7 @@ import org.javacord.api.interaction.SlashCommandInteraction;
 import org.javacord.api.interaction.SlashCommandInteractionOptionsProvider;
 import org.javacord.api.interaction.SlashCommandOption;
 import org.javacord.api.interaction.SlashCommandOptionChoice;
-import org.javacord.api.interaction.SlashCommandOptionChoiceBuilder;
+import org.javacord.api.listener.interaction.AutocompleteCreateListener;
 import org.javacord.api.listener.interaction.SlashCommandCreateListener;
 
 import canaryprism.slavacord.annotations.*;
@@ -64,6 +63,7 @@ public class CommandHandler {
     private final DiscordApi api;
 
     private final SlashCommandCreateListener listener;
+    private final AutocompleteCreateListener autocomplete_listener;
 
     private ArrayList<SlashCommandData> commands = new ArrayList<>();
     
@@ -79,6 +79,10 @@ public class CommandHandler {
         this.listener = this::listener;
 
         this.api.addSlashCommandCreateListener(listener);
+
+        this.autocomplete_listener = this::autocompleteListener;
+
+        this.api.addAutocompleteCreateListener(autocomplete_listener);
     }
 
     private static final Pattern space_pattern = Pattern.compile(" ");
@@ -94,7 +98,11 @@ public class CommandHandler {
 
     private void autocompleteListener(AutocompleteCreateEvent e) {
         var interaction = e.getAutocompleteInteraction();
+        var names = space_pattern.split(interaction.getFullCommandName());
 
+        synchronized (commands) {
+            commands.forEach((command) -> findMethodAndAutocomplete(names, 0, interaction, interaction, command, null));
+        }
     }
     
     private void findMethodAndExecute(String[] names, int index, SlashCommandInteraction interaction, SlashCommandInteractionOptionsProvider interaction_options, SlashCommandData command, SlashCommandOptionData<?> option) {
@@ -563,6 +571,7 @@ public class CommandHandler {
      */
     public void stop() {
         api.removeListener(listener);
+        api.removeListener(autocomplete_listener);
     }
 
     /**
