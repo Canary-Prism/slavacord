@@ -685,26 +685,17 @@ public class CommandHandler {
                         if (option == null) 
                             throw new ParsingException("All parameters must have either @Interaction or @Option", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
 
-                        var parameter_type = parameter.getParameterizedType().getTypeName();
-                        Class<?> inner_class = null;
-                        try {
-                            inner_class = Class.forName(
-                                (parameter_type.startsWith("java.util.Optional"))?
-                                parameter_type.split("<")[1].split(">")[0] :
-                                parameter_type
-                            );
-                        } catch (ClassNotFoundException e) {
-                            inner_class = CommandHandler.class; //this is a hack to make the switch statement work lmfao
+
+                        var parameter_type = parameter.getParameterizedType();
+                        var actual_type = parameter_type;
+                        if (parameter_type instanceof ParameterizedType pt && pt.getRawType().equals(Optional.class)) {
+                            actual_type = pt.getActualTypeArguments()[0];
                         }
 
+                        var is_enum = actual_type instanceof Class<?> c && c.isEnum();
+
                         var option_type = switch (
-                            (!inner_class.isEnum())? (
-                                (parameter_type.startsWith("java.util.Optional"))?
-                                    parameter_type.split("<")[1].split(">")[0] 
-                                :
-                                    parameter_type
-                            ) :
-                                "enum"
+                            (is_enum) ? "enum" : actual_type.toString()
                         ) {
                             case "java.lang.String" -> org.javacord.api.interaction.SlashCommandOptionType.STRING;
                             case "long", "java.lang.Long" -> org.javacord.api.interaction.SlashCommandOptionType.LONG;
@@ -727,7 +718,7 @@ public class CommandHandler {
                         var option_localizations = parseLocalizationData(parameter.getDeclaredAnnotationsByType(Trans.class), 
                                 "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
 
-                        var option_required = !parameter.getParameterizedType().getTypeName().contains("java.util.Optional");
+                        var option_required = !(parameter_type instanceof ParameterizedType pt && pt.getRawType().equals(Optional.class));
                         var option_string_choices = option.stringChoices();
                         var option_long_choices = option.longChoices();
                         var option_double_choices = option.doubleChoices();
@@ -813,7 +804,8 @@ public class CommandHandler {
                             ));
                             has_choices = true;
 
-                        } else if (inner_class.isEnum()) {
+                        } else if (is_enum) {
+                            var inner_class = (Class<?>)actual_type;
                             var optionchoices = new ArrayList<SlashCommandOptionChoiceData<Enum<?>>>();
                             if (option_type != org.javacord.api.interaction.SlashCommandOptionType.LONG) {
                                 throw new ParsingException("Invalid option choice type at parameter " + parameter.getName() + " in method " + method.getName(), "at class " + target.getName());
