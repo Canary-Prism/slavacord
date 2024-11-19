@@ -695,7 +695,7 @@ public class CommandHandler {
                         var is_enum = actual_type instanceof Class<?> c && c.isEnum();
 
                         var option_type = switch (
-                            (is_enum) ? "enum" : actual_type.toString()
+                            (is_enum) ? "enum" : actual_type.getTypeName()
                         ) {
                             case "java.lang.String" -> org.javacord.api.interaction.SlashCommandOptionType.STRING;
                             case "long", "java.lang.Long" -> org.javacord.api.interaction.SlashCommandOptionType.LONG;
