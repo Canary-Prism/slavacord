@@ -133,31 +133,23 @@ public class CommandHandler {
                     for (int i = 0; i < options.size(); i++) {
                         var option_type = options.get(i).type();
                         boolean is_required = options.get(i).required();
+                        var option_name = options.get(i).name();
                         if (!options.get(i).stores_enum()) {
+                            var opt_value = switch (option_type) {
+                                case STRING -> interaction_options.getArgumentStringValueByName(option_name);
+                                case LONG -> interaction_options.getArgumentLongValueByName(option_name);
+                                case DECIMAL -> interaction_options.getArgumentDecimalValueByName(option_name);
+                                case BOOLEAN -> interaction_options.getArgumentBooleanValueByName(option_name);
+                                case USER -> interaction_options.getArgumentUserValueByName(option_name);
+                                case CHANNEL -> interaction_options.getArgumentChannelValueByName(option_name);
+                                case ROLE -> interaction_options.getArgumentRoleValueByName(option_name);
+                                case MENTIONABLE -> interaction_options.getArgumentMentionableValueByName(option_name);
+                                default -> throw new IllegalArgumentException("Invalid option type");
+                            };
                             if (is_required)
-                                switch (option_type) {
-                                    case STRING -> parameters.add(interaction_options.getArgumentStringValueByName(options.get(i).name()).get());
-                                    case LONG -> parameters.add(interaction_options.getArgumentLongValueByName(options.get(i).name()).get());
-                                    case DECIMAL -> parameters.add(interaction_options.getArgumentDecimalValueByName(options.get(i).name()));
-                                    case BOOLEAN -> parameters.add(interaction_options.getArgumentBooleanValueByName(options.get(i).name()).get());
-                                    case USER -> parameters.add(interaction_options.getArgumentUserValueByName(options.get(i).name()).get());
-                                    case CHANNEL -> parameters.add(interaction_options.getArgumentChannelValueByName(options.get(i).name()).get());
-                                    case ROLE -> parameters.add(interaction_options.getArgumentRoleValueByName(options.get(i).name()).get());
-                                    case MENTIONABLE -> parameters.add(interaction_options.getArgumentMentionableValueByName(options.get(i).name()).get());
-                                    default -> throw new IllegalArgumentException("Invalid option type");
-                                }
+                                parameters.add(opt_value.get());
                             else
-                                switch (option_type) {
-                                    case STRING -> parameters.add(interaction_options.getArgumentStringValueByName(options.get(i).name()));
-                                    case LONG -> parameters.add(interaction_options.getArgumentLongValueByName(options.get(i).name()));
-                                    case DECIMAL -> parameters.add(interaction_options.getArgumentDecimalValueByName(options.get(i).name()));
-                                    case BOOLEAN -> parameters.add(interaction_options.getArgumentBooleanValueByName(options.get(i).name()));
-                                    case USER -> parameters.add(interaction_options.getArgumentUserValueByName(options.get(i).name()));
-                                    case CHANNEL -> parameters.add(interaction_options.getArgumentChannelValueByName(options.get(i).name()));
-                                    case ROLE -> parameters.add(interaction_options.getArgumentRoleValueByName(options.get(i).name()));
-                                    case MENTIONABLE -> parameters.add(interaction_options.getArgumentMentionableValueByName(options.get(i).name()));
-                                    default -> throw new IllegalArgumentException("Invalid option type");
-                                }
+                                parameters.add(opt_value);
                         } else {
                             if (option_type != org.javacord.api.interaction.SlashCommandOptionType.LONG) {
                                 throw new IllegalArgumentException("Invalid option type for enum");
