@@ -709,7 +709,7 @@ public class CommandHandler {
 
                             case "enum" -> org.javacord.api.interaction.SlashCommandOptionType.LONG;
 
-                            default -> throw new ParsingException("Invalid parameter type, only types supported by Discord can be used", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                            default -> throw new ParsingException("Invalid parameter type '" + actual_type.getTypeName() + "', only types supported by Discord can be used", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
                         };
 
                         var option_name = option.name();
