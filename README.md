@@ -149,7 +149,7 @@ speaking of which
 
 ### Option Choices
 
-the `@Option` parameter has the properties `doubleChoices` `longChoices` and `stringChoices` which let you turn these options into option *choices*, where the user can only select from a provided set of values, these are represented with annotations `@OptionChoiceDouble` `@OptionChoiceLong` and `@OptionChoiceString` and are pretty much 1 to 1 with discord's api
+the `@Option` parameter has the properties `longChoices` and `stringChoices` which let you turn these options into option *choices*, where the user can only select from a provided set of values, these are represented with annotations `@OptionChoiceLong` and `@OptionChoiceString` and are pretty much 1 to 1 with discord's api
 ```java
 // in command method parameter list..
 @Option(name = "day_of_week", longChoices = {
@@ -162,7 +162,7 @@ the `@Option` parameter has the properties `doubleChoices` `longChoices` and `st
     @OptionChoiceLong(name = "Saturday", value = 6),
 }) long day_of_week
 ```
-(and the same concept applies for Strings and doubles just with different names)
+(and the same concept applies for Strings just with different names)
 
 however the usage of these are not recommended because,,, just look at them they are ugly as sh-  
 thus it is almost always a better choice to just use enums as previously mentioned
@@ -311,7 +311,7 @@ for each annotation you are allowed to only provide the name or description or b
 
 #### for OptionChoices
 
-you can use `@OptionChoiceString`, `@OptionChoiceLong`, and `@OptionChoiceDouble`'s `translations` property and set it to an array of `@OptionChoiceTrans` like so
+you can use `@OptionChoiceString` and `@OptionChoiceLong`'s `translations` property and set it to an array of `@OptionChoiceTrans` like so
 ```java
 // in command method parameter list..
 @Option(name = "number", longChoices = {
