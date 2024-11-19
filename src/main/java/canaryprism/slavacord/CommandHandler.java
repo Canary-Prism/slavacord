@@ -22,6 +22,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
@@ -30,16 +31,22 @@ import org.apache.logging.log4j.Logger;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.entity.message.MessageFlag;
 import org.javacord.api.entity.permission.PermissionType;
+import org.javacord.api.event.interaction.AutocompleteCreateEvent;
 import org.javacord.api.event.interaction.SlashCommandCreateEvent;
+import org.javacord.api.interaction.AutocompleteInteraction;
 import org.javacord.api.interaction.DiscordLocale;
 import org.javacord.api.interaction.SlashCommand;
 import org.javacord.api.interaction.SlashCommandInteraction;
 import org.javacord.api.interaction.SlashCommandInteractionOptionsProvider;
 import org.javacord.api.interaction.SlashCommandOption;
 import org.javacord.api.interaction.SlashCommandOptionChoice;
+import org.javacord.api.interaction.SlashCommandOptionChoiceBuilder;
 import org.javacord.api.listener.interaction.SlashCommandCreateListener;
 
 import canaryprism.slavacord.annotations.*;
+import canaryprism.slavacord.autocomplete.AutocompleteSuggestion;
+import canaryprism.slavacord.autocomplete.annotations.Autocompleter;
+import canaryprism.slavacord.autocomplete.annotations.Autocompletes;
 import canaryprism.slavacord.data.*;
 import canaryprism.slavacord.exceptions.ParsingException;
 
@@ -85,6 +92,11 @@ public class CommandHandler {
         }
     }
 
+    private void autocompleteListener(AutocompleteCreateEvent e) {
+        var interaction = e.getAutocompleteInteraction();
+
+    }
+    
     private void findMethodAndExecute(String[] names, int index, SlashCommandInteraction interaction, SlashCommandInteractionOptionsProvider interaction_options, SlashCommandData command, SlashCommandOptionData<?> option) {
 
         String looking_for = names[index];
@@ -265,6 +277,123 @@ public class CommandHandler {
             }
         }
 
+    }
+
+    private void findMethodAndAutocomplete(String[] names, int index, AutocompleteInteraction interaction, SlashCommandInteractionOptionsProvider interaction_options, SlashCommandData command, SlashCommandOptionData<?> option) {
+
+        String looking_for = names[index];
+
+        var focused_option = interaction.getFocusedOption();
+
+        String name;
+        List<SlashCommandOptionData<?>> options;
+        if (command == null) {
+            name = option.name();
+            options = option.options();
+        } else {
+            name = command.name();
+            options = command.options();
+        }
+
+        if (name.equals(looking_for)) {
+            if (index == names.length - 1) {
+
+                for (var e : options) {
+                    if (e.name().equals(focused_option.getName())) {
+                        if (e.autocompletable_data() == null) {
+                            throw new IllegalArgumentException("SlashCommandOptionData has no autocompletable data");
+                        }
+                        var autocompletable_data = e.autocompletable_data();
+                        var method = autocompletable_data.method();
+                        var instance = autocompletable_data.instance();
+                        var requires_interaction = autocompletable_data.requires_interaction();
+                        if (!methodmap.containsKey(method)) {
+                            try {
+                                methodmap.put(method, MethodHandles.lookup().unreflect(method));
+                            } catch (IllegalAccessException ex) {
+                                throw new NoSuchElementException(ex);
+                            }
+                        }
+
+                        var handle = Objects.requireNonNull(methodmap.get(method));
+
+                        var parameters = new ArrayList<Object>();
+                        if (!Modifier.isStatic(method.getModifiers())) {
+                            parameters.add(Objects.requireNonNull(instance, "Instance not found for non-static method"));
+                        }
+
+                        if (requires_interaction) {
+                            parameters.add(interaction);
+                        }
+                        
+                        var opt_value = switch (autocompletable_data.type()) {
+                            case STRING -> interaction_options.getArgumentStringValueByName(focused_option.getName());
+                            case LONG -> interaction_options.getArgumentLongValueByName(focused_option.getName());
+                        };
+
+                        parameters.add(opt_value.get());
+
+                        final Async async = method.getDeclaredAnnotation(Async.class);
+
+                        if (async == null) {
+                            try {
+                                var result = handle.invokeWithArguments(parameters);
+                                handleAutocompleteResult(result, autocompletable_data.type(), interaction);
+                            } catch (Throwable t) {
+                                logger.error("Exception in autocomplete event listener thread: ", t);
+                            }
+                        } else {
+                            dispatchThreaded(() -> {
+                                try {
+                                    var result = handle.invokeWithArguments(parameters);
+                                    handleAutocompleteResult(result, autocompletable_data.type(), interaction);
+                                } catch (Throwable t) {
+                                    logger.error("Exception in autocomplete thread: ", t);
+                                }
+                            }, (async.threadingMode() != ThreadingMode.none)? async.threadingMode() : threading_mode);
+                        }
+                    }
+                }
+            
+            } else {
+                if (options == null) {
+                    throw new IllegalArgumentException("SlashCommandData has no options");
+                }
+                for (var e : options) {
+                    try {
+                        findMethodAndAutocomplete(names, index + 1, interaction, interaction_options.getOptionByName(e.name()).get(), null, e);
+                    } catch (NoSuchElementException n) {
+                        // ignore
+                    }
+                }
+            }
+        }
+
+    }
+    
+    @SuppressWarnings("unchecked")
+    private void handleAutocompleteResult(Object returned, AutocompletableData.Type type, AutocompleteInteraction interaction) {
+        var suggestions = (List<AutocompleteSuggestion<?>>) returned;
+
+        var list = new ArrayList<SlashCommandOptionChoice>();
+        switch (type) {
+            case STRING -> {
+                for (var suggestion : suggestions) {
+                    list.add(SlashCommandOptionChoice.create(suggestion.name(), suggestion.value().toString()));
+                }
+            }
+            case LONG -> {
+                for (var suggestion : suggestions) {
+                    list.add(SlashCommandOptionChoice.create(suggestion.name(), (long)suggestion.value()));
+                }
+            }
+        }
+
+        interaction.respondWithChoices(list)
+            .exceptionally(t -> {
+                logger.error("Exception when submitting autocomplete response: ", t);
+                return null;
+            });
     }
 
     private volatile ThreadingMode threading_mode = ThreadingMode.prefervirtual;
@@ -724,6 +853,123 @@ public class CommandHandler {
 
                         
 
+                        var autocomplete = parameter.getDeclaredAnnotation(Autocompletes.class);
+                        if (autocomplete != null) {
+                            if (actual_type != String.class && actual_type != Long.class && actual_type != long.class)
+                                throw new ParsingException("Autocomplete can only be applied to String or long", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                            var actual_class = (Class<?>)actual_type;
+
+                            if (option_string_choices.length > 0 || option_long_choices.length > 0)
+                                throw new ParsingException("Autocomplete cannot be used with choices", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                            try {
+                                var supplier_class = autocomplete.supplierClass();
+                                if (supplier_class == Void.class) {
+                                    supplier_class = target;
+                                }
+                                var supplier_class_is_target = (supplier_class == target);
+                                var supplier_method_name = autocomplete.supplierMethod();
+    
+                                try {
+
+                                    NoSuchMethodException nsme = null;
+                                    Method supplier_method_with_interaction = null;
+                                    try {
+                                        supplier_method_with_interaction = supplier_class.getMethod(supplier_method_name, AutocompleteInteraction.class, actual_class);
+                                    } catch (NoSuchMethodException e) {
+                                        nsme = e;
+                                    }
+
+                                    Method supplier_method_without_interaction = null;
+                                    try {
+                                        supplier_method_without_interaction = supplier_class.getMethod(supplier_method_name, actual_class);
+                                    } catch (NoSuchMethodException e) {
+                                        nsme = e;
+                                    }
+
+                                    Method supplier_method;
+                                    boolean supplier_requires_interaction;
+
+                                    if (supplier_method_with_interaction == null && supplier_method_without_interaction == null) {
+                                        throw nsme;
+                                    } else if (supplier_method_with_interaction != null && supplier_method_without_interaction != null) {
+
+                                        ParsingException pe = null;
+                                        try {
+                                            validateAutocompleteSupplierMethod(supplier_method_with_interaction, actual_class);
+                                        } catch (ParsingException e) {
+                                            supplier_method_with_interaction = null;
+                                            pe = e;
+                                        }
+                                        try {
+                                            validateAutocompleteSupplierMethod(supplier_method_without_interaction, actual_class);
+                                        } catch (ParsingException e) {
+                                            supplier_method_without_interaction = null;
+                                            pe = e;
+                                        }
+
+                                        if (pe == null)
+                                            throw new ParsingException("Ambiguous autocomplete supplier method, ", "at class " + supplier_class.getName());
+                                        
+                                        if (supplier_method_with_interaction == null && supplier_method_without_interaction == null)
+                                            throw pe;
+
+                                    }
+
+                                    if (supplier_method_with_interaction != null) {
+                                        supplier_method = supplier_method_with_interaction;
+                                        supplier_requires_interaction = true;
+                                    } else {
+                                        supplier_method = supplier_method_without_interaction;
+                                        supplier_requires_interaction = false;
+                                    }
+
+                                    validateAutocompleteSupplierMethod(supplier_method, actual_class);
+
+                                    var type = switch (actual_class.getName()) {
+                                        case "java.lang.String" -> AutocompletableData.Type.STRING;
+                                        case "long", "java.lang.Long" -> AutocompletableData.Type.LONG;
+                                        default -> throw new ParsingException("Invalid parameter type, only types supported by Discord can be used", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                                    };
+
+                                    AutocompletableData data;
+                                    if (supplier_class_is_target) {
+                                        if (Modifier.isStatic(supplier_method.getModifiers())) {
+                                            data = new AutocompletableData(supplier_method, null, type, requires_interaction);
+                                        } else {
+                                            data = new AutocompletableData(supplier_method, instance, type, requires_interaction);
+                                        }
+                                    } else {
+                                        if (!Modifier.isStatic(supplier_method.getModifiers())) {
+                                            throw new ParsingException("Autocomplete supplier method must be static if not in the same class", "in method " + supplier_class.getName() + "." + supplier_method_name + "(" + actual_class.getSimpleName() + ")");
+                                        }
+                                        data = new AutocompletableData(supplier_method, null, type, requires_interaction);
+                                    }
+
+                                    options.add(new SlashCommandOptionData<String>(
+                                        option_name, 
+                                        option_description, 
+                                        option_localizations,
+                                        option_required, 
+                                        option_type, 
+                                        null, 
+                                        null,
+                                        data, 
+                                        null, 
+                                        null, 
+                                        false,
+                                        false
+                                    ));
+                                    
+    
+                                } catch (NoSuchMethodException | SecurityException e) {
+                                    throw new ParsingException("Autocompleter method not found, an Autocompleter method can only take the parameters (" + actual_class.getSimpleName() + ") or (AutocompleteInteraction, " + actual_class.getSimpleName() + ")", "at class " + supplier_class.getName(), e);
+                                } catch (ParsingException e) {
+                                    throw e.addParseTrace("at class " + supplier_class.getName());
+                                }
+                            } catch (ParsingException e) {
+                                throw e.addParseTrace("with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                            }
+                        } else if (option_string_choices.length > 0) {
                             var optionchoices = new ArrayList<SlashCommandOptionChoiceData<String>>();
                             if (option_type != org.javacord.api.interaction.SlashCommandOptionType.STRING) {
                                 throw new ParsingException("Option Choices type does not match parameter", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
@@ -743,6 +989,7 @@ public class CommandHandler {
                                 option_type, 
                                 null, 
                                 optionchoices, 
+                                null,
                                 null,
                                 null,
                                 false,
@@ -811,14 +1058,14 @@ public class CommandHandler {
                                 option_type, 
                                 null, 
                                 optionchoices, 
+                                null, 
                                 null,
                                 null,
                                 false,
                                 true
                             ));
-                            has_choices = true;
-                        }
-                        if (!has_choices)
+
+                        } else {
                             options.add(new SlashCommandOptionData<Long>(
                                 option_name, 
                                 option_description, 
@@ -827,11 +1074,13 @@ public class CommandHandler {
                                 option_type, 
                                 null, 
                                 null, 
+                                null, 
                                 null,
                                 null,
                                 false,
                                 false
                             ));
+                        }
                     }
                 } catch (ParsingException e) {
                     throw e.addParseTrace("in method " + target.getName() + "." + method.getName());
@@ -889,6 +1138,7 @@ public class CommandHandler {
                         false, 
                         org.javacord.api.interaction.SlashCommandOptionType.SUB_COMMAND, 
                         options, 
+                        null, 
                         null, 
                         method,
                         instance,
@@ -1001,6 +1251,7 @@ public class CommandHandler {
                         org.javacord.api.interaction.SlashCommandOptionType.SUB_COMMAND_GROUP, 
                         options, 
                         null, 
+                        null, 
                         null,
                         null,
                         true,
@@ -1061,6 +1312,29 @@ public class CommandHandler {
         return map;
     }
 
+    private void validateAutocompleteSupplierMethod(Method method, Class<?> actual_class) {
+        var supplier_class = method.getDeclaringClass();
+
+        if (!(method.getGenericReturnType() instanceof ParameterizedType list_type
+                && list_type.getRawType() == List.class
+                && list_type.getActualTypeArguments()[0] instanceof ParameterizedType suggestion_type
+                && suggestion_type.getRawType() == AutocompleteSuggestion.class
+                && suggestion_type.getActualTypeArguments()[0] == actual_class)) {
+
+            throw new ParsingException(
+                    "Autocomplete supplier method must return List<AutocompleteSuggestion<"
+                            + actual_class.getSimpleName() + ">>",
+                    "in method " + supplier_class.getName() + "." + method.getName() + "("
+                            + actual_class.getSimpleName() + ")");
+        }
+
+        if (method.getDeclaredAnnotation(Autocompleter.class) == null) {
+            throw new ParsingException("Autocomplete supplier method must be annotated with @Autocompleter",
+                    "in method " + supplier_class.getName() + "." + method.getName() + "("
+                            + actual_class.getSimpleName() + ")");
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private SlashCommandData parseFromSlashCommand(SlashCommand command) {
         var name = command.getName();
@@ -1082,7 +1356,7 @@ public class CommandHandler {
         var type = option.getType();
         var options = option.getOptions().stream().map(this::parseFromSlashCommandOption).toList();
         var choices = option.getChoices().stream().map(this::parseFromSlashCommandOptionChoice).toList();
-        return new SlashCommandOptionData(name, description, localizations, required, type, options, choices, null, null, false, false);
+        return new SlashCommandOptionData(name, description, localizations, required, type, options, choices, null, null, null, false, false);
     }
     private SlashCommandOptionChoiceData<?> parseFromSlashCommandOptionChoice(SlashCommandOptionChoice choice) {
         var name = choice.getName();

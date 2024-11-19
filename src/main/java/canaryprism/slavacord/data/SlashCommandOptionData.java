@@ -14,6 +14,7 @@ public record SlashCommandOptionData<T>(
     SlashCommandOptionType type,
     List<SlashCommandOptionData<?>> options,
     List<SlashCommandOptionChoiceData<T>> choices,
+    AutocompletableData autocompletable_data,
     Method method,
     Object instance,
     boolean requires_interaction,
@@ -79,6 +80,8 @@ public record SlashCommandOptionData<T>(
         builder.setDescription(description);
         builder.setRequired(required);
         builder.setType(type);
+
+        builder.setAutocompletable(autocompletable_data != null);
 
         localizations.names().forEach(builder::addNameLocalization);
         localizations.descriptions().forEach(builder::addDescriptionLocalization);
