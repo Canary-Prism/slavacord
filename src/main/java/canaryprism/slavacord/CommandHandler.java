@@ -730,6 +730,7 @@ public class CommandHandler {
                         var option_required = !parameter.getParameterizedType().getTypeName().contains("java.util.Optional");
                         var option_string_choices = option.stringChoices();
                         var option_long_choices = option.longChoices();
+                        var option_double_choices = option.doubleChoices();
 
                         boolean has_choices = false;
 
@@ -785,6 +786,33 @@ public class CommandHandler {
                                 false
                             ));
                             has_choices = true;
+                        } else if (option_double_choices.length > 0) {
+                            var optionchoices = new ArrayList<SlashCommandOptionChoiceData<Double>>();
+                            if (option_type != org.javacord.api.interaction.SlashCommandOptionType.DECIMAL) {
+                                throw new ParsingException("Invalid option choice type at parameter " + parameter.getName() + " in method " + method.getName(), "at class " + target.getName());
+                            }
+                            for (var choice : option_double_choices) {
+                                optionchoices.add(new SlashCommandOptionChoiceData<Double>(
+                                    choice.name(), 
+                                    choice.value(),
+                                    parseOptionChoiceTranslations(choice.translations(), "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")")
+                                ));
+                            }
+                            options.add(new SlashCommandOptionData<Double>(
+                                option_name, 
+                                option_description, 
+                                option_localizations,
+                                option_required, 
+                                option_type, 
+                                null, 
+                                optionchoices, 
+                                null,
+                                null,
+                                false,
+                                false
+                            ));
+                            has_choices = true;
+
                         } else if (inner_class.isEnum()) {
                             var optionchoices = new ArrayList<SlashCommandOptionChoiceData<Enum<?>>>();
                             if (option_type != org.javacord.api.interaction.SlashCommandOptionType.LONG) {
