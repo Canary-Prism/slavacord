@@ -648,12 +648,15 @@ public class CommandHandler {
             if (!overwrites) {
                 to_add.addAll(api.getGlobalSlashCommands().join().stream().map(this::parseFromSlashCommand).toList());
 
-                // remove duplicates from new_commands
-                var it = new_commands.listIterator();
+                var new_command_names = new_commands.stream().map(SlashCommandData::name).collect(Collectors.toSet());
+
+                // override old commands with new ones if they're the same name
+                var it = to_add.listIterator();
                 while (it.hasNext()) {
                     var command = it.next();
-                    if (to_add.contains(command)) {
+                    if (new_command_names.contains(command.name())) {
                         it.remove();
+                        logger.debug(() -> "overwriting old command " + command + " retrieved from discord with new command");
                     }
                 }
             }
@@ -664,11 +667,18 @@ public class CommandHandler {
             if (!overwrites) {
                 to_add.addAll(api.getServerSlashCommands(api.getServerById(server_id).get()).join().stream().map(this::parseFromSlashCommand).toList());
 
-                for (int i = 0; i < to_add.size(); i++) {
-                    if (to_add.contains(to_add.get(i))) {
-                        to_add.remove(i--);
+                var new_command_names = new_commands.stream().map(SlashCommandData::name).collect(Collectors.toSet());
+
+                // override old commands with new ones if they're the same name
+                var it = to_add.listIterator();
+                while (it.hasNext()) {
+                    var command = it.next();
+                    if (new_command_names.contains(command.name())) {
+                        it.remove();
+                        logger.debug(() -> "overwriting old command " + command + " retrieved from discord with new command");
                     }
                 }
+
             }
             to_add.addAll(new_commands);
             api.bulkOverwriteServerApplicationCommands(server_id, to_add.stream().map(SlashCommandData::toSlashCommandBuilder).collect(Collectors.toSet())).join();
