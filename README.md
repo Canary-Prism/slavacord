@@ -137,7 +137,7 @@ here is a list of types that are supported by discord and this library:
 - `boolean`
 - `java.lang.Boolean`
 - `org.javacord.api.entity.user.User`
-- `org.javacord.api.entity.channel.ServerChannel`
+- `org.javacord.api.entity.channel.ServerChannel` or subtypes (see [Channel Type Bounds](#channel-type-bounds))
 - `org.javacord.api.entity.Role`
 - `org.javacord.api.entity.Mentionable`
 - `org.javacord.api.entity.Attachment`
@@ -182,6 +182,40 @@ enum DaysOfWeek {
 this uses the enums' literal names (defined by their identifiers in sourcecode) as the String keys for the option choices, however, if your enum implements `CustomChoiceName` then it will be the String returned by calling `getCustomName()`
 
 it is important to note that option choice names are not allowed to be more than 25 characters long. enums that don't have custom choice names will get their names trimmed to fit under the limit (however as of the current version the library does NOT make a check that the trimmed names are still mutually unique), but enums that *do* implement `CustomChoiceName`, as well as manual long or String option choices don't get this treatment
+
+### Option Bounds
+
+if you want your option to have some validation but not go so far as to use Option Choices you can use Option Bounds to limit the allowed values
+
+#### Basic Bounds
+
+you can use `@DoubleBounds` `@LongBounds` and `@StringLengthBounds` to limit `double`, `long`, and `String` options respectively
+```java
+// in command method parameter list...
+@DoubleBounds(min = -10, max = 10) @Option(name = "d") double d,
+@LongBounds(min = 0) @Option(name = "l") long l, // you can choose to only specify one of the bounds
+@StringLengthBounds(min = 1, max = 10) @Option(name = "str") String str // you can limit the String lengths too
+```
+these values are all inclusive (i think)
+
+### Channel Type Bounds
+
+you can also limit what kinds of channels are allowed with `@ChannelTypeBounds`
+```java
+// in command method parameter list...
+@ChannelTypeBounds({ ChannelType.SERVER_TEXT_CHANNEL, ChannelType.SERVER_VOICE_CHANNEL })
+@Option(name = "channel") ServerChannel channel
+```
+in this example users may only select a ServerTextChannel or ServerVoiceChannel for this slash command option
+
+because subtyping is fun you are also allowed to specify a **subtype** of `ServerChannel` in order to limit allowed channels that way
+```java
+// in command method parameter list...
+@Option(name = "text_channel") ServerTextChannel text_channel,
+@Option(name = "voice_channel") ServerVoiceChannel vc,
+```
+
+you can even use both methods at the same time, specify multiple specific channel types with `@ChannelTypeBounds` and declare the parameter's type as a subtype that they all share to minimise casting. however obviously all of the specified channel types must be able to be assigned to your parameter type
 
 ### Optional Command Arguments
 
