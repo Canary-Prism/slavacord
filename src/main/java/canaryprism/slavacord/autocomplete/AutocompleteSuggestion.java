@@ -42,7 +42,7 @@ public record AutocompleteSuggestion<T>(String name, T value, Map<DiscordLocale,
     }
 
     /**
-     * Creates a new String autocomplete suggestion with no localizations. none of the parameters may be null. this is a convenience method for {@link #of(String, String)}.
+     * Creates a new String autocomplete suggestion with no localizations. none of the parameters may be null. this is a convenience method for {@link #of(String, Object) of(String, String)}.
      * @param name_and_value the name and value of the suggestion
      */
     public static AutocompleteSuggestion<String> of(String name_and_value) {
