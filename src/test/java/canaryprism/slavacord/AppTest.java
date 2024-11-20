@@ -35,7 +35,7 @@ import canaryprism.slavacord.mock.MockDiscordApi;
 public class AppTest {
 
     static {
-        Configurator.setRootLevel(Level.DEBUG);
+        Configurator.setRootLevel(Level.INFO);
     }
     
     @Test
