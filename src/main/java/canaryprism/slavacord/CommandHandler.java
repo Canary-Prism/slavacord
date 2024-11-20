@@ -456,8 +456,8 @@ public class CommandHandler {
             case prefervirtual -> vthread_ex.orElse(osthread_ex);
             case none -> throw new UnsupportedOperationException("ThreadingMode.none is not allowed here");
         };
-        if (dispatcher != null) {
-            dispatcher.submit(runnable);
+        
+        dispatcher.submit(runnable);
         } else {
             runnable.run();
         }
