@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.5.0
+- added support for Option Bounds
+- fixed Async throwing erroneous exception when applied directly to a command method in Java versions prior to 21
+- added just... so many logging calls.. turn on `TRACE` level logs and enjoy lmfto
+- opened internal Data classes for Reflection (have fun :3 (or not, there's really not that much there))
+
 ## v2.4.1
 - attempts to make autocompleter method accessible in reflection
 - fixed bug where registering with `overwrites: false` just... doesn't work that well and often breaks
