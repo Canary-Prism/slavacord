@@ -19,7 +19,7 @@ public record SlashCommandData(
      * The server ID to register the command in. (0 for global)
      */
     long server_id,
-    List<SlashCommandOptionData<?>> options,
+    List<? extends SlashCommandOptionData<?>> options,
     Method method,
     Object instance,
     boolean requires_interaction

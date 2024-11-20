@@ -131,7 +131,7 @@ public class CommandHandler {
         Method method;
         Object instance;
         String name;
-        List<SlashCommandOptionData<?>> options;
+        List<? extends SlashCommandOptionData<?>> options;
         boolean requires_interaction;
         if (command == null) {
             method = option.method();
@@ -327,7 +327,7 @@ public class CommandHandler {
         var focused_option = interaction.getFocusedOption();
 
         String name;
-        List<SlashCommandOptionData<?>> options;
+        List<? extends SlashCommandOptionData<?>> options;
         if (command == null) {
             name = option.name();
             options = option.options();
@@ -1677,7 +1677,7 @@ public class CommandHandler {
 
         var options = command.getOptions().stream().map(this::parseFromSlashCommandOption).toList();
 
-        return new SlashCommandData(name, description, localizations, enabled_in_DMs, nsfw, command.getDefaultRequiredPermissions().orElse(null), server_id, (List<SlashCommandOptionData<?>>) options, null, null, false);
+        return new SlashCommandData(name, description, localizations, enabled_in_DMs, nsfw, command.getDefaultRequiredPermissions().orElse(null), server_id, (List<? extends SlashCommandOptionData<?>>) options, null, null, false);
     }
     @SuppressWarnings({"unchecked", "rawtypes"})
     private SlashCommandOptionData<?> parseFromSlashCommandOption(SlashCommandOption option) {
