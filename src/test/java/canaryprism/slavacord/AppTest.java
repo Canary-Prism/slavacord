@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.util.List;
 import java.util.Optional;
 
+import org.javacord.api.entity.channel.ChannelType;
+import org.javacord.api.entity.channel.RegularServerChannel;
 import org.javacord.api.interaction.DiscordLocale;
 import org.junit.jupiter.api.Test;
 
@@ -13,6 +15,10 @@ import canaryprism.slavacord.annotations.CreateGlobal;
 import canaryprism.slavacord.annotations.Option;
 import canaryprism.slavacord.annotations.ReturnsResponse;
 import canaryprism.slavacord.annotations.Trans;
+import canaryprism.slavacord.annotations.optionbounds.ChannelTypeBounds;
+import canaryprism.slavacord.annotations.optionbounds.DoubleBounds;
+import canaryprism.slavacord.annotations.optionbounds.LongBounds;
+import canaryprism.slavacord.annotations.optionbounds.StringLengthBounds;
 import canaryprism.slavacord.autocomplete.AutocompleteSuggestion;
 import canaryprism.slavacord.autocomplete.annotations.Autocompleter;
 import canaryprism.slavacord.autocomplete.annotations.Autocompletes;
@@ -135,6 +141,24 @@ public class AppTest {
             public List<AutocompleteSuggestion<String>> autocompleter(String nya) {
                 return null;
             }
+        }
+
+        handler.register(new Mewo(), false);
+    }
+
+    @Test
+    public void optionBoundsParsingTest() {
+        var handler = new CommandHandler(new MockDiscordApi());
+
+        @CreateGlobal
+        class Mewo implements Commands {
+            @Command(name = "mewo", description = "mewo")
+            void mewo(
+                @StringLengthBounds @Option(name = "one") String str,
+                @DoubleBounds @Option(name = "two") double d,
+                @LongBounds @Option(name = "three") long l,
+                @ChannelTypeBounds({ ChannelType.SERVER_TEXT_CHANNEL }) @Option(name = "four") RegularServerChannel channel
+            ) {}
         }
 
         handler.register(new Mewo(), false);

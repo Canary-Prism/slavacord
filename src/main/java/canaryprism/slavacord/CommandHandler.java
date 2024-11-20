@@ -18,6 +18,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
@@ -28,6 +29,8 @@ import java.util.Objects;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.javacord.api.DiscordApi;
+import org.javacord.api.entity.channel.ChannelType;
+import org.javacord.api.entity.channel.ServerChannel;
 import org.javacord.api.entity.message.MessageFlag;
 import org.javacord.api.entity.permission.PermissionType;
 import org.javacord.api.event.interaction.AutocompleteCreateEvent;
@@ -39,14 +42,24 @@ import org.javacord.api.interaction.SlashCommandInteraction;
 import org.javacord.api.interaction.SlashCommandInteractionOptionsProvider;
 import org.javacord.api.interaction.SlashCommandOption;
 import org.javacord.api.interaction.SlashCommandOptionChoice;
+import org.javacord.api.interaction.SlashCommandOptionType;
 import org.javacord.api.listener.interaction.AutocompleteCreateListener;
 import org.javacord.api.listener.interaction.SlashCommandCreateListener;
 
 import canaryprism.slavacord.annotations.*;
+import canaryprism.slavacord.annotations.optionbounds.ChannelTypeBounds;
+import canaryprism.slavacord.annotations.optionbounds.DoubleBounds;
+import canaryprism.slavacord.annotations.optionbounds.LongBounds;
+import canaryprism.slavacord.annotations.optionbounds.StringLengthBounds;
 import canaryprism.slavacord.autocomplete.AutocompleteSuggestion;
 import canaryprism.slavacord.autocomplete.annotations.Autocompleter;
 import canaryprism.slavacord.autocomplete.annotations.Autocompletes;
 import canaryprism.slavacord.data.*;
+import canaryprism.slavacord.data.optionbounds.ChannelTypeBoundsData;
+import canaryprism.slavacord.data.optionbounds.DoubleBoundsData;
+import canaryprism.slavacord.data.optionbounds.LongBoundsData;
+import canaryprism.slavacord.data.optionbounds.OptionBoundsData;
+import canaryprism.slavacord.data.optionbounds.StringLengthBoundsData;
 import canaryprism.slavacord.exceptions.ParsingException;
 
 /**
@@ -835,9 +848,14 @@ public class CommandHandler {
 
 
                         var parameter_type = parameter.getParameterizedType();
-                        var actual_type = parameter_type;
+                        var unwrapped_type = parameter_type;
                         if (parameter_type instanceof ParameterizedType pt && pt.getRawType().equals(Optional.class)) {
-                            actual_type = pt.getActualTypeArguments()[0];
+                            unwrapped_type = pt.getActualTypeArguments()[0];
+                        }
+
+                        var actual_type = unwrapped_type;
+                        if (unwrapped_type instanceof Class<?> c && ServerChannel.class.isAssignableFrom(c)) {
+                            actual_type = ServerChannel.class;
                         }
 
                         var is_enum = actual_type instanceof Class<?> c && c.isEnum();
@@ -845,17 +863,17 @@ public class CommandHandler {
                         var option_type = switch (
                             (is_enum) ? "enum" : actual_type.getTypeName()
                         ) {
-                            case "java.lang.String" -> org.javacord.api.interaction.SlashCommandOptionType.STRING;
-                            case "long", "java.lang.Long" -> org.javacord.api.interaction.SlashCommandOptionType.LONG;
-                            case "double", "java.lang.Double" -> org.javacord.api.interaction.SlashCommandOptionType.DECIMAL;
-                            case "boolean", "java.lang.Boolean" -> org.javacord.api.interaction.SlashCommandOptionType.BOOLEAN;
-                            case "org.javacord.api.entity.user.User" -> org.javacord.api.interaction.SlashCommandOptionType.USER;
-                            case "org.javacord.api.entity.channel.ServerChannel" -> org.javacord.api.interaction.SlashCommandOptionType.CHANNEL;
-                            case "org.javacord.api.entity.Role" -> org.javacord.api.interaction.SlashCommandOptionType.ROLE;
-                            case "org.javacord.api.entity.Mentionable" -> org.javacord.api.interaction.SlashCommandOptionType.MENTIONABLE;
-                            case "org.javacord.api.entity.Attachment" -> org.javacord.api.interaction.SlashCommandOptionType.ATTACHMENT;
+                            case "java.lang.String" -> SlashCommandOptionType.STRING;
+                            case "long", "java.lang.Long" -> SlashCommandOptionType.LONG;
+                            case "double", "java.lang.Double" -> SlashCommandOptionType.DECIMAL;
+                            case "boolean", "java.lang.Boolean" -> SlashCommandOptionType.BOOLEAN;
+                            case "org.javacord.api.entity.user.User" -> SlashCommandOptionType.USER;
+                            case "org.javacord.api.entity.channel.ServerChannel" -> SlashCommandOptionType.CHANNEL;
+                            case "org.javacord.api.entity.Role" -> SlashCommandOptionType.ROLE;
+                            case "org.javacord.api.entity.Mentionable" -> SlashCommandOptionType.MENTIONABLE;
+                            case "org.javacord.api.entity.Attachment" -> SlashCommandOptionType.ATTACHMENT;
 
-                            case "enum" -> org.javacord.api.interaction.SlashCommandOptionType.LONG;
+                            case "enum" -> SlashCommandOptionType.LONG;
 
                             default -> throw new ParsingException("Invalid parameter type '" + actual_type.getTypeName() + "', only types supported by Discord can be used", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
                         };
@@ -870,7 +888,116 @@ public class CommandHandler {
                         var option_string_choices = option.stringChoices();
                         var option_long_choices = option.longChoices();
 
-                        
+                        OptionBoundsData bounds_data = null;
+
+                        Set<ChannelType> inferred_channel_bounds = null;
+                        if (option_type == SlashCommandOptionType.CHANNEL) {
+                            inferred_channel_bounds = inferChannelTypeBounds(((Class<?>)actual_type));
+
+                            bounds_data = new ChannelTypeBoundsData(inferred_channel_bounds);
+                        }
+
+                        var channel_type_bounds = parameter.getDeclaredAnnotation(ChannelTypeBounds.class);
+                        if (channel_type_bounds != null) {
+                            if (option_type != SlashCommandOptionType.CHANNEL) {
+                                throw new ParsingException("ChannelTypeBounds can only be applied to Channel parameters", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                            }
+
+                            var channel_types_arr = channel_type_bounds.value();
+                            var channel_types = new HashSet<ChannelType>();
+                            for (var type : channel_types_arr) {
+                                var success = channel_types.add(type);
+                                if (!success) {
+                                    logger.warn(() -> String.format("""
+                                            Duplicate Channel bound types found %s with parameter %s.%s(%s %s) !!
+                                            ignoring duplicate
+                                            """, type, target.getName(), method.getName(), parameter.getType().getSimpleName(), parameter.getName()));
+                                }
+                            }
+
+                            if (!inferred_channel_bounds.containsAll(channel_types)) {
+                                throw new ParsingException("@ChannelTypeBounds allows channel types that aren't assignable to the parameter type " + actual_type, "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                            }
+
+                            if (channel_types.isEmpty()) {
+                                throw new ParsingException("empty ChannelTypeBounds not allowed", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                            }
+
+                            bounds_data = new ChannelTypeBoundsData(channel_types);
+                        }
+
+                        var double_bounds = parameter.getDeclaredAnnotation(DoubleBounds.class);
+                        if (double_bounds != null) {
+                            if (option_type != SlashCommandOptionType.DECIMAL) {
+                                throw new ParsingException("@DoubleBounds can only be applied to double parameters", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                            }
+
+                            var min = double_bounds.min();
+                            var max = double_bounds.max();
+
+                            if (min > max) {
+                                throw new ParsingException("DoubleBounds min must be less than or equal to max", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                            }
+                            
+                            if (min <= -0x20000000000000L && max >= 0x20000000000000L) {
+                                logger.warn(() -> String.format("""
+                                        DoubleBounds has no effect
+                                            with parameter %s.%s(%s %s)
+                                        """, target.getName(), method.getName(), parameter.getType().getSimpleName(), parameter.getName()));
+                            }
+
+                            bounds_data = new DoubleBoundsData(min, max);
+                        }
+
+                        var long_bounds = parameter.getDeclaredAnnotation(LongBounds.class);
+                        if (long_bounds != null) {
+                            if (option_type != SlashCommandOptionType.LONG) {
+                                throw new ParsingException("@LongBounds can only be applied to long parameters", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                            }
+
+                            var min = long_bounds.min();
+                            var max = long_bounds.max();
+
+                            if (min > max) {
+                                throw new ParsingException("LongBounds min must be less than or equal to max", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                            }
+
+                            if (min <= -0x20000000000000L && max >= 0x20000000000000L) {
+                                logger.warn(() -> String.format("""
+                                        LongBounds has no effect
+                                            with parameter %s.%s(%s %s)
+                                        """, target.getName(), method.getName(), parameter.getType().getSimpleName(), parameter.getName()));
+                            }
+
+                            bounds_data = new LongBoundsData(min, max);
+                        }
+
+                        var string_length_bounds = parameter.getDeclaredAnnotation(StringLengthBounds.class);
+                        if (string_length_bounds != null) {
+                            if (option_type != SlashCommandOptionType.STRING) {
+                                throw new ParsingException("@StringLengthBounds can only be applied to String parameters", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                            }
+
+                            var min = string_length_bounds.min();
+                            var max = string_length_bounds.max();
+
+                            if (min > max) {
+                                throw new ParsingException("StringLengthBounds min must be less than or equal to max", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                            }
+
+                            if (min < 0) {
+                                throw new ParsingException("StringLengthBounds min must not be negative", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                            }
+
+                            if (min == 0 && max == Long.MAX_VALUE) {
+                                logger.warn(() -> String.format("""
+                                        StringLengthBounds has no effect
+                                            with parameter %s.%s(%s %s)
+                                        """, target.getName(), method.getName(), parameter.getType().getSimpleName(), parameter.getName()));
+                            }
+
+                            bounds_data = new StringLengthBoundsData(min, max);
+                        }
 
                         var autocomplete = parameter.getDeclaredAnnotation(Autocompletes.class);
                         if (autocomplete != null) {
@@ -978,7 +1105,8 @@ public class CommandHandler {
                                         null, 
                                         null, 
                                         false,
-                                        false
+                                        false,
+                                        bounds_data
                                     ));
                                     
     
@@ -994,6 +1122,9 @@ public class CommandHandler {
                             var optionchoices = new ArrayList<SlashCommandOptionChoiceData<String>>();
                             if (option_type != org.javacord.api.interaction.SlashCommandOptionType.STRING) {
                                 throw new ParsingException("Option Choices type does not match parameter", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                            }
+                            if (bounds_data != null) {
+                                throw new ParsingException("Option Choices cannot be used when bounds are present", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
                             }
                             for (var choice : option_string_choices) {
                                 optionchoices.add(new SlashCommandOptionChoiceData<String>(
@@ -1014,13 +1145,17 @@ public class CommandHandler {
                                 null,
                                 null,
                                 false,
-                                false
+                                false,
+                                null
                             ));
 
                         } else if (option_long_choices.length > 0) {
                             var optionchoices = new ArrayList<SlashCommandOptionChoiceData<Long>>();
                             if (option_type != org.javacord.api.interaction.SlashCommandOptionType.LONG) {
                                 throw new ParsingException("Invalid option choice type at parameter " + parameter.getName() + " in method " + method.getName(), "at class " + target.getName());
+                            }
+                            if (bounds_data != null) {
+                                throw new ParsingException("Option Choices cannot be used when bounds are present", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
                             }
                             for (var choice : option_long_choices) {
                                 optionchoices.add(new SlashCommandOptionChoiceData<Long>(
@@ -1041,7 +1176,8 @@ public class CommandHandler {
                                 null,
                                 null,
                                 false,
-                                false
+                                false,
+                                null
                             ));
 
                         } else if (is_enum) {
@@ -1049,6 +1185,9 @@ public class CommandHandler {
                             var optionchoices = new ArrayList<SlashCommandOptionChoiceData<Enum<?>>>();
                             if (option_type != org.javacord.api.interaction.SlashCommandOptionType.LONG) {
                                 throw new ParsingException("Invalid option choice type at parameter " + parameter.getName() + " in method " + method.getName(), "at class " + target.getName());
+                            }
+                            if (long_bounds != null) {
+                                throw new ParsingException("Option Choices cannot be used when bounds are present", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
                             }
                             if (CustomChoiceName.class.isAssignableFrom(inner_class)) {
                                 for (var choice : inner_class.getEnumConstants()) {
@@ -1083,7 +1222,8 @@ public class CommandHandler {
                                 null,
                                 null,
                                 false,
-                                true
+                                true,
+                                null
                             ));
 
                         } else {
@@ -1099,7 +1239,8 @@ public class CommandHandler {
                                 null,
                                 null,
                                 false,
-                                false
+                                false,
+                                bounds_data
                             ));
                         }
                     }
@@ -1164,7 +1305,8 @@ public class CommandHandler {
                         method,
                         instance,
                         requires_interaction,
-                        false
+                        false,
+                        null
                     ));
                 }
 
@@ -1276,7 +1418,8 @@ public class CommandHandler {
                         null,
                         null,
                         true,
-                        false
+                        false,
+                        null
                     ));
                 }
             }
@@ -1356,6 +1499,18 @@ public class CommandHandler {
         }
     }
 
+    private Set<ChannelType> inferChannelTypeBounds(Class<?> parameter_type) {
+        var set = new HashSet<ChannelType>();
+
+        for (var type : ChannelType.values()) {
+            if (parameter_type.isAssignableFrom(ChannelTypeBoundsData.getChannelClass(type))) {
+                set.add(type);
+            }
+        }
+
+        return set;
+    }
+
     @SuppressWarnings("unchecked")
     private SlashCommandData parseFromSlashCommand(SlashCommand command) {
         var name = command.getName();
@@ -1377,7 +1532,25 @@ public class CommandHandler {
         var type = option.getType();
         var options = option.getOptions().stream().map(this::parseFromSlashCommandOption).toList();
         var choices = option.getChoices().stream().map(this::parseFromSlashCommandOptionChoice).toList();
-        return new SlashCommandOptionData(name, description, localizations, required, type, options, choices, null, null, null, false, false);
+
+        var bounds = switch (type) {
+            case CHANNEL -> new ChannelTypeBoundsData(option.getChannelTypes());
+            case DECIMAL -> new DoubleBoundsData(
+                option.getDecimalMinValue().orElse(Double.MIN_NORMAL), 
+                option.getDecimalMaxValue().orElse(Double.MAX_VALUE)
+            );
+            case LONG -> new LongBoundsData(
+                option.getLongMinValue().orElse(Long.MIN_VALUE), 
+                option.getLongMaxValue().orElse(Long.MAX_VALUE)
+            );
+            case STRING -> new StringLengthBoundsData(
+                option.getMinLength().orElse(0L), 
+                option.getMaxLength().orElse(Long.MAX_VALUE)
+            );
+            default -> null;
+        };
+
+        return new SlashCommandOptionData(name, description, localizations, required, type, options, choices, null, null, null, false, false, bounds);
     }
     private SlashCommandOptionChoiceData<?> parseFromSlashCommandOptionChoice(SlashCommandOptionChoice choice) {
         var name = choice.getName();

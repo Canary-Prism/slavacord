@@ -6,6 +6,8 @@ import java.util.List;
 import org.javacord.api.interaction.SlashCommandOptionBuilder;
 import org.javacord.api.interaction.SlashCommandOptionType;
 
+import canaryprism.slavacord.data.optionbounds.OptionBoundsData;
+
 public record SlashCommandOptionData<T>(
     String name,
     String description,
@@ -18,7 +20,8 @@ public record SlashCommandOptionData<T>(
     Method method,
     Object instance,
     boolean requires_interaction,
-    boolean stores_enum
+    boolean stores_enum,
+    OptionBoundsData bounds
 ) implements Data {
     @Override
     public String toString() {
@@ -82,6 +85,10 @@ public record SlashCommandOptionData<T>(
         builder.setType(type);
 
         builder.setAutocompletable(autocompletable_data != null);
+
+        if (bounds != null) {
+            bounds.apply(builder);
+        }
 
         localizations.names().forEach(builder::addNameLocalization);
         localizations.descriptions().forEach(builder::addDescriptionLocalization);
