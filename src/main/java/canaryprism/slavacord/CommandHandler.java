@@ -880,7 +880,7 @@ public class CommandHandler {
                 var name = group_of_commands.name();
                 var description = group_of_commands.description();
 
-                if (description.isBlank()) {
+                if (description.isEmpty()) {
                     description = name;
                 }
 
