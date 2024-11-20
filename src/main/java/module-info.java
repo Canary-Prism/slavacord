@@ -8,4 +8,7 @@ module canaryprism.slavacord {
     exports canaryprism.slavacord.exceptions;
     exports canaryprism.slavacord.autocomplete;
     exports canaryprism.slavacord.autocomplete.annotations;
+
+    opens canaryprism.slavacord.data;
+    opens canaryprism.slavacord.data.optionbounds;
 }
