@@ -280,6 +280,12 @@ public class CommandHandler {
      * @param mode the mode to use
      */
     public void setDefaultThreadingMode(ThreadingMode mode) {
+        if (mode == ThreadingMode.none) {
+            throw new IllegalArgumentException("ThreadingMode.none is not allowed here");
+        }
+        if (mode == ThreadingMode.virtual && vthread_ex.isEmpty()) {
+            throw new UnsupportedOperationException("No virtual thread support found for this JVM");
+        }
         threading_mode = mode;
     }
 
