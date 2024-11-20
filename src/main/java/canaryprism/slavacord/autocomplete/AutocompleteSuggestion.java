@@ -19,4 +19,8 @@ public record AutocompleteSuggestion<T>(String name, T value, Map<DiscordLocale,
     public static <T> AutocompleteSuggestion<T> of(String name, T value) {
         return new AutocompleteSuggestion<>(name, value);
     }
+
+    public static AutocompleteSuggestion<String> of(String name_and_value) {
+        return of(name_and_value, name_and_value);
+    }
 }
