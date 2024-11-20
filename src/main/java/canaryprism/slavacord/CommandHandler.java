@@ -808,7 +808,8 @@ public class CommandHandler {
                 if (returns_response != null && returns_response.ephemeral() && returns_response.silent())
                     throw new ParsingException("@ReturnsResponse cannot have both ephemeral and silent set to true", "in method " + target.getName() + "." + method.getName());
 
-                if ((method.getDeclaredAnnotation(Async.class)) != null && vthread_ex.isEmpty())
+                var async = getAnnotationRecursive(method, Async.class);
+                if (async != null && vthread_ex.isEmpty() && async.threadingMode() == ThreadingMode.virtual)
                     throw new ParsingException("Virtual threads are not supported on this JVM", "in method " + target.getName() + "." + method.getName());
 
                 var name = command.name();
