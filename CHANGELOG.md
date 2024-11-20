@@ -2,7 +2,7 @@
 
 ## v2.4.1
 - attempts to make autocompleter method accessible in reflection
-- fixed bug where registering with `override = false` just... doesn't work that well and often breaks
+- fixed bug where registering with `overwrites: false` just... doesn't work that well and often breaks
 
 ## v2.4.0
 - added support for ATTACHMENT option type
