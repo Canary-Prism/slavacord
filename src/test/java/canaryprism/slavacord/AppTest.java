@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.Optional;
 
 import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.javacord.api.entity.channel.ChannelType;
 import org.javacord.api.entity.channel.RegularServerChannel;
