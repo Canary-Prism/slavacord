@@ -883,14 +883,14 @@ public class CommandHandler {
                                     NoSuchMethodException nsme = null;
                                     Method supplier_method_with_interaction = null;
                                     try {
-                                        supplier_method_with_interaction = supplier_class.getMethod(supplier_method_name, AutocompleteInteraction.class, actual_class);
+                                        supplier_method_with_interaction = supplier_class.getDeclaredMethod(supplier_method_name, AutocompleteInteraction.class, actual_class);
                                     } catch (NoSuchMethodException e) {
                                         nsme = e;
                                     }
 
                                     Method supplier_method_without_interaction = null;
                                     try {
-                                        supplier_method_without_interaction = supplier_class.getMethod(supplier_method_name, actual_class);
+                                        supplier_method_without_interaction = supplier_class.getDeclaredMethod(supplier_method_name, actual_class);
                                     } catch (NoSuchMethodException e) {
                                         nsme = e;
                                     }
@@ -953,6 +953,8 @@ public class CommandHandler {
                                         }
                                         data = new AutocompletableData(supplier_method, null, type, supplier_requires_interaction);
                                     }
+
+                                    supplier_method.setAccessible(true);
 
                                     options.add(new SlashCommandOptionData<String>(
                                         option_name, 
