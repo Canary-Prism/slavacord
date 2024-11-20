@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.4.0
+- added support for ATTACHMENT option type
+- added support for autocompletes
+
 ## v2.3.0
 - added nsfw flag to commands and command group (not applicable to nested commands and command groups)
 - warn setting `setEnabledInDMs` in nested commands and command groups
