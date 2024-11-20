@@ -360,6 +360,57 @@ enum Numbers implements CustomChoiceName {
 @Option(name = "number") Numbers number
 ```
 
+### Autocompletes
+
+this is probably the least intuitive part of the library,,,
+
+in Discord a `String` or `long` SlashCommandOption may be marked `autocompletable` which means that when the user starts typing in the option discord will send an event to your bot telling it what their current input is and you can respond by suggesting SlashCommandOptionChoices that the user may choose from
+
+**NOTE: unlike [Static Option Choices](#option-choices) these choices are NOT FORCED. the user is still free to enter any arbitrary value they like**
+
+it is due to this discrepancy that this library avoids the term "Option Choice" when talking about autocompletes and prefers "Suggestions"
+
+you mark a slash command option autocompletable by annotating it with `@Autocompletes`. you must specify the *class* and *name ofmethod* that will supply the autocomplete suggestions
+```java
+// in command method parameter list..
+@Autocompletes(autocompleterClass = Mewo.class, autocompleter = "getSuggestions") 
+@Option(name = "query") String query
+```
+the referenced method must then be an Autocompleter method, which must be a static method annotated with `@Autocompleter` that takes the parameters `(T)` or `(AutocompleteInteraction, T)` and returns `List<AutocompleteSuggestion<T>>`, where `T` is the type of the option. the passed `T` is the current value the user entered into the option
+```java
+// anywhere
+class Mewo {
+    @Autocompleter
+    static List<AutocompleteSuggestion<String>> getSuggestions(String partial_input) {
+        return List.of(
+            AutocompleteSuggestion.of("name", "value")
+        );
+    }
+}
+```
+
+currently in this example the Autocompleter method is responsible for taking the passed partial input into consideration when returning suggestions. i'll probably make a utility method that filters for only the suggestions that match the input later
+
+if your autocompleter method is in the same class as your command method, the syntax is slightly more convenient  
+you are allowed to only specify the autocompleter's method name, and your autocompleter method is allowed to be non-static as long as you passed in an instance to the command handler when registering your Commands class
+```java
+// in a commands class..
+
+@Command(name = "mewo", description = "mewo")
+void mewo(@Autocompletes(autocompleter = "getSuggestions") @Option(name = "text") String text) {
+}
+
+@Autocompleter
+List<AutocompleteSuggestion<String>> getSuggestions(AutocompleteInteraction interaction, String partial_input) {
+    // please do not attempt to respond with suggestions with the interaction yourself
+    return List.of(
+        AutocompleteSuggestion.of("name", "value")
+    );
+}
+```
+
+Autocompleter methods are allowed to be annotated with `@Async`
+
 ### Parsing Exception
 
 this library throws ParsingException for issues relating to the conversion of your `Commands` class and its command methods and command group classes. 
