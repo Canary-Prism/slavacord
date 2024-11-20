@@ -871,12 +871,12 @@ public class CommandHandler {
                             if (option_string_choices.length > 0 || option_long_choices.length > 0)
                                 throw new ParsingException("Autocomplete cannot be used with choices", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
                             try {
-                                var supplier_class = autocomplete.supplierClass();
+                                var supplier_class = autocomplete.autocompleterClass();
                                 if (supplier_class == Void.class) {
                                     supplier_class = target;
                                 }
                                 var supplier_class_is_target = (supplier_class == target);
-                                var supplier_method_name = autocomplete.supplierMethod();
+                                var supplier_method_name = autocomplete.autocompleter();
     
                                 try {
 

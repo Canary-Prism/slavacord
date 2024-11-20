@@ -127,7 +127,7 @@ public class AppTest {
         @CreateGlobal
         class Mewo implements Commands {
             @Command(name = "mewo", description = "mewo")
-            public void mewo(@Autocompletes(supplierMethod = "autocompleter") @Option(name = "nya", description = "nya") String nya) {
+            public void mewo(@Autocompletes(autocompleter = "autocompleter") @Option(name = "nya", description = "nya") String nya) {
                 // do nothing
             }
 

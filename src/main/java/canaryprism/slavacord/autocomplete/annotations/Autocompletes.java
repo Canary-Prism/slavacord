@@ -6,7 +6,7 @@ import java.lang.annotation.Target;
 @Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
 @Target({ java.lang.annotation.ElementType.PARAMETER })
 public @interface Autocompletes {
-    Class<?> supplierClass() default Void.class; // default to Void.class which actually parses to implicitly the class this annotation is used in
+    Class<?> autocompleterClass() default Void.class; // default to Void.class which actually parses to implicitly the class this annotation is used in
 
-    String supplierMethod();
+    String autocompleter();
 }
