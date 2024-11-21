@@ -496,7 +496,7 @@ public class CommandHandler {
             case PLATFORM -> osthread_ex;
             case VIRTUAL -> vthread_ex.orElseThrow(() -> new UnsupportedOperationException("No virtual thread support found for this JVM"));
             case DAEMON -> daemonthread_ex;
-            case PREFER_VIRTUAL -> vthread_ex.orElse(osthread_ex);
+            case PREFER_VIRTUAL -> vthread_ex.orElse(daemonthread_ex);
             case NONE -> throw new UnsupportedOperationException("ThreadingMode.none is not allowed here");
         };
 

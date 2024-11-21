@@ -310,7 +310,7 @@ what exactly it uses depends on the set `ThreadingMode`
 - `platform`: uses an ExecutorService with a cached thread pool
 - `daemon`: similar to `platform` but uses daemon threads that won't keep the JVM alive
 - `virtual`: uses virtual threads (only available for Java 21 or higher)
-- `prefervirtual`: tries to use `virtual` but fallbacks to `platform` if they aren't supported on the JVM this is run in
+- `prefervirtual`: tries to use `virtual` but fallbacks to `daemon` if they aren't supported on the JVM this is run in
 
 by default commands do not specify a `ThreadingMode` and instead use the `CommandHandler`'s default which is `prefervirtual`
 

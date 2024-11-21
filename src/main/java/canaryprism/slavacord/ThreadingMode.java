@@ -30,7 +30,7 @@ public enum ThreadingMode {
     VIRTUAL,
 
     /**
-     * <p>the command will be executed with virtual threads if available, otherwise it will be executed with OS threads</p>
+     * <p>the command will be executed with virtual threads if available, otherwise it will be executed with OS daemon threads</p>
      * <p>this is the default mode</p>
      */
     PREFER_VIRTUAL,
