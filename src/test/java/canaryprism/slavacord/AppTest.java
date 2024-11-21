@@ -160,7 +160,7 @@ public class AppTest {
     public void testsToMakeIntellijHappy() {
         var handler = new CommandHandler(new MockDiscordApi());
 
-        handler.setDefaultThreadingMode(ThreadingMode.platform);
+        handler.setDefaultThreadingMode(ThreadingMode.PLATFORM);
 
         handler.stop();
     }

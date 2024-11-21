@@ -15,28 +15,28 @@ public enum ThreadingMode {
     /**
      * the command will be executed with platform threads
      */
-    platform, 
+    PLATFORM,
 
     /**
-     * similar to {@link #platform platform}, but the command will be executed in a daemon thread
+     * similar to {@link #PLATFORM platform}, but the command will be executed in a daemon thread
      */
-    daemon,
+    DAEMON,
 
     /**
      * <i><b>Warning:</b> this mode is only available on Java 21 and above</i>
      * <p><b>i *will* yell at you if you use it before Java 21 :3</b></p>
      * <p>the command will be executed with virtual threads</p>
      */
-    virtual, 
+    VIRTUAL,
 
     /**
      * <p>the command will be executed with virtual threads if available, otherwise it will be executed with OS threads</p>
      * <p>this is the default mode</p>
      */
-    prefervirtual,
+    PREFER_VIRTUAL,
     
     /**
      * shh, don't tell anyone
      */
-    none;
+    NONE;
 }

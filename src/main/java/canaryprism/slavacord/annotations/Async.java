@@ -26,5 +26,5 @@ public @interface Async {
      * the threading mode to use for command dispatching
      * @return the threading mode to use for command dispatching
      */
-    ThreadingMode threadingMode() default ThreadingMode.none;
+    ThreadingMode threadingMode() default ThreadingMode.NONE;
 }

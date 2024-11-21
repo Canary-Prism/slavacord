@@ -299,7 +299,7 @@ public class CommandHandler {
                         } catch (Throwable e) {
                             logger.error("Exception in command execution thread", e);
                         }
-                    }, (async.threadingMode() != ThreadingMode.none)? async.threadingMode() : threading_mode);
+                    }, (async.threadingMode() != ThreadingMode.NONE)? async.threadingMode() : threading_mode);
                 }
 
 
@@ -402,7 +402,7 @@ public class CommandHandler {
                                 } catch (Throwable t) {
                                     logger.error("Exception in autocomplete thread: ", t);
                                 }
-                            }, (async.threadingMode() != ThreadingMode.none)? async.threadingMode() : threading_mode);
+                            }, (async.threadingMode() != ThreadingMode.NONE)? async.threadingMode() : threading_mode);
                         }
                     }
                 }
@@ -451,18 +451,18 @@ public class CommandHandler {
             });
     }
 
-    private volatile ThreadingMode threading_mode = ThreadingMode.prefervirtual;
+    private volatile ThreadingMode threading_mode = ThreadingMode.PREFER_VIRTUAL;
 
     /**
      * <p>sets the default threading mode that is used when a command doesn't specify what mode to use itself</p>
-     * <p>default value is {@link ThreadingMode#prefervirtual}
+     * <p>default value is {@link ThreadingMode#PREFER_VIRTUAL}
      * @param mode the mode to use
      */
     public void setDefaultThreadingMode(ThreadingMode mode) {
-        if (mode == ThreadingMode.none) {
+        if (mode == ThreadingMode.NONE) {
             throw new IllegalArgumentException("ThreadingMode.none is not allowed here");
         }
-        if (mode == ThreadingMode.virtual && vthread_ex.isEmpty()) {
+        if (mode == ThreadingMode.VIRTUAL && vthread_ex.isEmpty()) {
             throw new UnsupportedOperationException("No virtual thread support found for this JVM");
         }
         threading_mode = mode;
@@ -493,11 +493,11 @@ public class CommandHandler {
 
     private static void dispatchThreaded(Runnable runnable, ThreadingMode mode) {
         var dispatcher = switch (mode) {
-            case platform -> osthread_ex;
-            case virtual -> vthread_ex.orElseThrow(() -> new UnsupportedOperationException("No virtual thread support found for this JVM"));
-            case daemon -> daemonthread_ex;
-            case prefervirtual -> vthread_ex.orElse(osthread_ex);
-            case none -> throw new UnsupportedOperationException("ThreadingMode.none is not allowed here");
+            case PLATFORM -> osthread_ex;
+            case VIRTUAL -> vthread_ex.orElseThrow(() -> new UnsupportedOperationException("No virtual thread support found for this JVM"));
+            case DAEMON -> daemonthread_ex;
+            case PREFER_VIRTUAL -> vthread_ex.orElse(osthread_ex);
+            case NONE -> throw new UnsupportedOperationException("ThreadingMode.none is not allowed here");
         };
 
         dispatcher.submit(runnable);
@@ -907,7 +907,7 @@ public class CommandHandler {
                 if (async != null) {
                     logger.trace("found @Async on method");
 
-                    if (vthread_ex.isEmpty() && async.threadingMode() == ThreadingMode.virtual)
+                    if (vthread_ex.isEmpty() && async.threadingMode() == ThreadingMode.VIRTUAL)
                         throw new ParsingException("Virtual threads are not supported on this JVM", "in method " + target.getName() + "." + method.getName());
                 }
 
