@@ -41,7 +41,9 @@ public class AppTest {
         try {
             new CommandHandler(null);
             fail("Should have thrown NPE");
-        } catch (NullPointerException e) {}
+        } catch (NullPointerException e) {
+            // do nothing
+        }
     }
 
  
@@ -143,7 +145,7 @@ public class AppTest {
         @CreateGlobal
         class Mewo implements Commands {
             @Command(name = "mewo", description = "mewo")
-            void mewo(
+            static void mewo(
                 @StringLengthBounds @Option(name = "one") String str,
                 @DoubleBounds @Option(name = "two") double d,
                 @LongBounds @Option(name = "three") long l,
@@ -151,6 +153,15 @@ public class AppTest {
             ) {}
         }
 
-        handler.register(new Mewo(), false);
+        handler.register(Mewo.class, false);
+    }
+
+    @Test
+    public void testsToMakeIntellijHappy() {
+        var handler = new CommandHandler(new MockDiscordApi());
+
+        handler.setDefaultThreadingMode(ThreadingMode.platform);
+
+        handler.stop();
     }
 }

@@ -61,6 +61,8 @@ import canaryprism.slavacord.data.optionbounds.LongBoundsData;
 import canaryprism.slavacord.data.optionbounds.OptionBoundsData;
 import canaryprism.slavacord.data.optionbounds.StringLengthBoundsData;
 import canaryprism.slavacord.exceptions.ParsingException;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * <h2>The main command handler of this library.</h2>
@@ -78,7 +80,7 @@ public class CommandHandler {
     private final SlashCommandCreateListener listener;
     private final AutocompleteCreateListener autocomplete_listener;
 
-    private ArrayList<SlashCommandData> commands = new ArrayList<>();
+    private final ArrayList<SlashCommandData> commands = new ArrayList<>();
     
     private final Map<Method, MethodHandle> methodmap = new HashMap<>();
 
@@ -100,28 +102,28 @@ public class CommandHandler {
         logger.debug("added AutocompleteCreateListener");
     }
 
-    private static final Pattern space_pattern = Pattern.compile(" ");
+    private static final Pattern SPACE_PATTERN = Pattern.compile(" ");
 
     private void listener(SlashCommandCreateEvent e) {
         var interaction = e.getSlashCommandInteraction();
-        var names = space_pattern.split(interaction.getFullCommandName());
+        var names = SPACE_PATTERN.split(interaction.getFullCommandName());
 
         synchronized (commands) {
             commands.forEach((command) -> findMethodAndExecute(names, 0, interaction, interaction, command, null));
         }
-        logger.debug("SlashCommandCreateEvent processed: " + interaction.getFullCommandName());
+        logger.debug("SlashCommandCreateEvent processed: {}", interaction.getFullCommandName());
     }
 
     private void autocompleteListener(AutocompleteCreateEvent e) {
         var interaction = e.getAutocompleteInteraction();
-        var names = space_pattern.split(interaction.getFullCommandName());
+        var names = SPACE_PATTERN.split(interaction.getFullCommandName());
 
         synchronized (commands) {
             commands.forEach((command) -> findMethodAndAutocomplete(names, 0, interaction, interaction, command, null));
         }
-        logger.debug("AutocompleteCreateEvent processed: " + interaction.getFullCommandName());
+        logger.debug("AutocompleteCreateEvent processed: {}", interaction.getFullCommandName());
     }
-    
+
     private void findMethodAndExecute(String[] names, int index, SlashCommandInteraction interaction, SlashCommandInteractionOptionsProvider interaction_options, SlashCommandData command, SlashCommandOptionData<?> option) {
 
         String looking_for = names[index];
@@ -175,12 +177,12 @@ public class CommandHandler {
                 }
                 if (options != null) {
                     logger.trace("Method has options, parsing options");
-                    for (int i = 0; i < options.size(); i++) {
-                        logger.trace("parsing option: {}", options.get(i));
-                        var option_type = options.get(i).type();
-                        boolean is_required = options.get(i).required();
-                        var option_name = options.get(i).name();
-                        if (!options.get(i).stores_enum()) {
+                    for (SlashCommandOptionData<?> slashCommandOptionData : options) {
+                        logger.trace("parsing option: {}", slashCommandOptionData);
+                        var option_type = slashCommandOptionData.type();
+                        boolean is_required = slashCommandOptionData.required();
+                        var option_name = slashCommandOptionData.name();
+                        if (!slashCommandOptionData.stores_enum()) {
                             var opt_value = switch (option_type) {
                                 case STRING -> interaction_options.getArgumentStringValueByName(option_name);
                                 case LONG -> interaction_options.getArgumentLongValueByName(option_name);
@@ -191,31 +193,33 @@ public class CommandHandler {
                                 case ROLE -> interaction_options.getArgumentRoleValueByName(option_name);
                                 case MENTIONABLE -> interaction_options.getArgumentMentionableValueByName(option_name);
                                 case ATTACHMENT -> interaction_options.getArgumentAttachmentValueByName(option_name);
-                                case SUB_COMMAND, SUB_COMMAND_GROUP -> throw new IllegalArgumentException("Unexpected SUB_COMMAND/SUB_COMMAND_GROUP in option parser");
+                                case SUB_COMMAND, SUB_COMMAND_GROUP ->
+                                        throw new IllegalArgumentException("Unexpected SUB_COMMAND/SUB_COMMAND_GROUP in option parser");
                                 case UNKNOWN -> throw new IllegalArgumentException("Unknown Option Type");
                             };
                             if (is_required)
+                                //noinspection OptionalGetWithoutIsPresent
                                 parameters.add(opt_value.get());
                             else
                                 parameters.add(opt_value);
                         } else {
                             logger.trace("option stores enum, reconstructing enum value");
-                            if (option_type != org.javacord.api.interaction.SlashCommandOptionType.LONG) {
+                            if (option_type != SlashCommandOptionType.LONG) {
                                 throw new IllegalArgumentException("Invalid option type for enum");
                             }
                             if (is_required) {
-                                parameters.add(options.get(i).choices().get(
-                                        interaction_options.getArgumentLongValueByName(
-                                            options.get(i).name()
-                                        ).get().intValue()
-                                    ).value()
+                                parameters.add(slashCommandOptionData.choices().get(
+                                                interaction_options.getArgumentLongValueByName(
+                                                        slashCommandOptionData.name()
+                                                ).get().intValue()
+                                        ).value()
                                 );
                             } else {
-                                if (interaction_options.getArgumentLongValueByName(options.get(i).name()).isPresent())
+                                if (interaction_options.getArgumentLongValueByName(slashCommandOptionData.name()).isPresent())
                                     parameters.add(Optional.of(
-                                        options.get(i).choices().get(
-                                            interaction_options.getArgumentLongValueByName(options.get(i).name()).get().intValue()
-                                        ).value()
+                                            slashCommandOptionData.choices().get(
+                                                    interaction_options.getArgumentLongValueByName(slashCommandOptionData.name()).get().intValue()
+                                            ).value()
                                     ));
                                 else
                                     parameters.add(Optional.empty());
@@ -244,7 +248,7 @@ public class CommandHandler {
                         try {
 
                             if (returns_response != null) {
-                                if (async != null && async.respondLater()) {
+                                if (async.respondLater()) {
                                     var responder = interaction.respondLater(returns_response.ephemeral()).join();
                                     Object returned = handle.invokeWithArguments(parameters);
 
@@ -308,7 +312,7 @@ public class CommandHandler {
                 for (var e : options) {
                     try {
                         logger.trace("recursively looking for next segment: {}", names[index + 1]);
-                        findMethodAndExecute(names, index + 1, interaction, interaction_options.getOptionByName(e.name()).get(), null, e);
+                        findMethodAndExecute(names, index + 1, interaction, interaction_options.getOptionByName(e.name()).orElseThrow(), null, e);
                     } catch (NoSuchElementException n) {
                         // ignore
                     }
@@ -322,7 +326,7 @@ public class CommandHandler {
 
         String looking_for = names[index];
 
-        logger.trace("looking for command segment: {}", looking_for);
+        logger.trace("looking for command segment for autocomplete: {}", looking_for);
 
         var focused_option = interaction.getFocusedOption();
 
@@ -377,7 +381,7 @@ public class CommandHandler {
                             case LONG -> interaction_options.getArgumentLongValueByName(focused_option.getName());
                         };
 
-                        parameters.add(opt_value.get());
+                        parameters.add(opt_value.orElseThrow());
 
                         final Async async = method.getDeclaredAnnotation(Async.class);
 
@@ -411,7 +415,7 @@ public class CommandHandler {
                 for (var e : options) {
                     try {
                         logger.trace("recursively looking for next segment: {}", names[index + 1]);
-                        findMethodAndAutocomplete(names, index + 1, interaction, interaction_options.getOptionByName(e.name()).get(), null, e);
+                        findMethodAndAutocomplete(names, index + 1, interaction, interaction_options.getOptionByName(e.name()).orElseThrow(), null, e);
                     } catch (NoSuchElementException n) {
                         // ignore
                     }
@@ -469,6 +473,8 @@ public class CommandHandler {
         Optional<ExecutorService> handle = Optional.empty();
         try {
             logger.trace("checking for virtual thread support");
+            
+            @SuppressWarnings("JavaReflectionMemberAccess")
             var vthread_executor_getter = Class.forName("java.util.concurrent.Executors").getDeclaredMethod("newVirtualThreadPerTaskExecutor");
             handle = Optional.of((ExecutorService)vthread_executor_getter.invoke(null));
 
@@ -540,6 +546,7 @@ public class CommandHandler {
             logger.trace("return type should be Optional<String>");
 
             var opt = (Optional<?>) returned;
+            //noinspection OptionalAssignedToNull
             if (opt == null) {
                 // an Optional implies a contract that it will never be null
                 // this will not be treated as a valid value
@@ -615,6 +622,7 @@ public class CommandHandler {
         var root = Commands.class;
 
         logger.trace("method doesn't have annotation {}, looking from enclosing class {}", annotation_type, enclosing);
+        //noinspection ConstantValue silly intellij
         while (enclosing != null && !root.isInstance(enclosing)) {
             if (enclosing.getDeclaredAnnotation(annotation_type) != null) {
                 logger.trace("found annotation {} on class {}", annotation_type, enclosing);
@@ -649,7 +657,8 @@ public class CommandHandler {
      * <p>
      * if overwrites is true, all previous commands registered by the bot <b>will be deleted from discord</b>. 
      * yes, even the ones previously registered to this command handler.
-     * 
+     * </p>
+     * <p>
      * if overwrites is false, the command handler will attempt to get the existing commands from discord, and merge them with the new commands.
      * </p>
      * 
@@ -672,7 +681,8 @@ public class CommandHandler {
      * <p>
      * if overwrites is true, all previous commands registered by the bot <b>will be deleted from discord</b>. 
      * yes, even the ones previously registered to this command handler.
-     * 
+     * </p>
+     * <p>
      * if overwrites is false, the command handler will attempt to get the existing commands from discord, and merge them with the new commands.
      * </p>
      * 
@@ -736,7 +746,12 @@ public class CommandHandler {
         } else {
             if (!overwrites) {
                 logger.debug("getting existing server commands from discord");
-                to_add.addAll(api.getServerSlashCommands(api.getServerById(server_id).get()).join().stream().map(this::parseFromSlashCommand).toList());
+                to_add.addAll(
+                    api.getServerSlashCommands(
+                        api.getServerById(server_id)
+                        .orElseThrow(() -> new ParsingException(
+                            "couldn't find server with ID " + server_id, "at class " + target.getName()))
+                    ).join().stream().map(this::parseFromSlashCommand).toList());
 
                 var new_command_names = new_commands.stream().map(SlashCommandData::name).collect(Collectors.toSet());
 
@@ -760,14 +775,14 @@ public class CommandHandler {
         synchronized (commands) {
             if (!overwrites) {
                 logger.debug("overwrite set to false, merging new commands with existing commands in memory while overwriting ones with the same name and server id");
-                for (int i = 0; i < processed_commands.size(); i++) {
-                    for (int j = 0; j < commands.size(); j++) {
-                        if (processed_commands.get(i).name().equals(commands.get(j).name()) 
-                            && processed_commands.get(i).server_id() == commands.get(j).server_id()
-                            && !processed_commands.get(i).equals(commands.get(j))) {
+                for (var processed_command : processed_commands) {
+                    for (int i = 0; i < commands.size(); i++) {
+                        if (processed_command.name().equals(commands.get(i).name())
+                                && processed_command.server_id() == commands.get(i).server_id()
+                                && !processed_command.equals(commands.get(i))) {
                             logger.trace("replacing old command {} from memory with new command {}",
-                                commands.get(j)::toString, processed_commands.get(i)::toString);
-                            commands.remove(j--);
+                                commands.get(i)::toString, processed_command::toString);
+                            commands.remove(i--);
                         }
                     }
                 }
@@ -810,10 +825,14 @@ public class CommandHandler {
     }
 
     private static final ParameterizedType OPTIONAL_OF_STRING = new ParameterizedType() {
+        @NotNull
+        @Contract(value = " -> new", pure = true)
         @Override
         public Type[] getActualTypeArguments() {
             return new Type[] { String.class };
         }
+        @NotNull
+        @Contract(value = " -> new", pure = true)
         @Override
         public Type getRawType() {
             return Optional.class;
@@ -824,7 +843,7 @@ public class CommandHandler {
         }
     };
 
-    @SuppressWarnings({ "unchecked", "java:S3011" })
+    @SuppressWarnings({"unchecked", "java:S3011", "DuplicateExpressions"})
     private void parseFromClass(Object instance, Class<?> target, int depth, ArrayList<? extends Data> target_list) {
         logger.debug("parsing from class {} with instance {} at depth {}", target, instance, depth);
 
@@ -1244,7 +1263,7 @@ public class CommandHandler {
                             }
                             for (var choice : option_string_choices) {
                                 optionchoices.add(new SlashCommandOptionChoiceData<String>(
-                                    choice.name().equals("")? choice.value() : choice.name(), 
+                                    choice.name().isEmpty()? choice.value() : choice.name(),
                                     choice.value(),
                                     parseOptionChoiceTranslations(choice.translations(), "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")")
                                 ));
@@ -1624,6 +1643,7 @@ public class CommandHandler {
         return map;
     }
 
+    @SuppressWarnings("DuplicateExpressions")
     private void validateAutocompleteSupplierMethod(Method method, Class<?> actual_class) {
         logger.debug("validating autocomplete supplier method {}", method);
         var supplier_class = method.getDeclaringClass();
@@ -1665,7 +1685,6 @@ public class CommandHandler {
         return set;
     }
 
-    @SuppressWarnings("unchecked")
     private SlashCommandData parseFromSlashCommand(SlashCommand command) {
         logger.trace("parsing SlashCommand {}", command);
 
@@ -1677,7 +1696,7 @@ public class CommandHandler {
 
         var options = command.getOptions().stream().map(this::parseFromSlashCommandOption).toList();
 
-        return new SlashCommandData(name, description, localizations, enabled_in_DMs, nsfw, command.getDefaultRequiredPermissions().orElse(null), server_id, (List<? extends SlashCommandOptionData<?>>) options, null, null, false);
+        return new SlashCommandData(name, description, localizations, enabled_in_DMs, nsfw, command.getDefaultRequiredPermissions().orElse(null), server_id, options, null, null, false);
     }
     @SuppressWarnings({"unchecked", "rawtypes"})
     private SlashCommandOptionData<?> parseFromSlashCommandOption(SlashCommandOption option) {
