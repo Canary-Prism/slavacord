@@ -109,7 +109,10 @@ public class CommandHandler {
         var names = SPACE_PATTERN.split(interaction.getFullCommandName());
 
         synchronized (commands) {
-            commands.forEach((command) -> findMethodAndExecute(names, 0, interaction, interaction, command, null));
+            commands.stream()
+                .filter((command) ->
+                    command.server_id() == interaction.getRegisteredCommandServerId().orElse(0L))
+                .forEach((command) -> findMethodAndExecute(names, 0, interaction, interaction, command, null));
         }
         logger.debug("SlashCommandCreateEvent processed: {}", interaction.getFullCommandName());
     }
@@ -119,7 +122,10 @@ public class CommandHandler {
         var names = SPACE_PATTERN.split(interaction.getFullCommandName());
 
         synchronized (commands) {
-            commands.forEach((command) -> findMethodAndAutocomplete(names, 0, interaction, interaction, command, null));
+            commands.stream()
+                .filter((command) ->
+                    command.server_id() == interaction.getRegisteredCommandServerId().orElse(0L))
+                .forEach((command) -> findMethodAndAutocomplete(names, 0, interaction, interaction, command, null));
         }
         logger.debug("AutocompleteCreateEvent processed: {}", interaction.getFullCommandName());
     }
