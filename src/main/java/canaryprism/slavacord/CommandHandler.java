@@ -23,6 +23,9 @@ import java.util.stream.Collectors;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
+import canaryprism.slavacord.autocomplete.annotations.SearchSuggestions;
+import canaryprism.slavacord.data.autocompletefilter.AutocompleteFilter;
+import canaryprism.slavacord.data.autocompletefilter.AutocompleteFilterData;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.javacord.api.DiscordApi;
@@ -378,7 +381,9 @@ public class CommandHandler {
                             case LONG -> interaction_options.getArgumentLongValueByName(focused_option.getName());
                         };
 
-                        parameters.add(opt_value.orElseThrow());
+                        var user_input = opt_value.orElseThrow();
+
+                        parameters.add(user_input);
 
                         final Async async = method.getDeclaredAnnotation(Async.class);
 
@@ -386,7 +391,7 @@ public class CommandHandler {
                             logger.trace("Method is not async, executing immediately");
                             try {
                                 var result = handle.invokeWithArguments(parameters);
-                                handleAutocompleteResult(result, autocompletable_data.type(), interaction);
+                                handleAutocompleteResult(result, autocompletable_data, interaction, user_input);
                             } catch (Throwable t) {
                                 logger.error("Exception in autocomplete event listener thread: ", t);
                             }
@@ -395,7 +400,7 @@ public class CommandHandler {
                             dispatchThreaded(() -> {
                                 try {
                                     var result = handle.invokeWithArguments(parameters);
-                                    handleAutocompleteResult(result, autocompletable_data.type(), interaction);
+                                    handleAutocompleteResult(result, autocompletable_data, interaction, user_input);
                                 } catch (Throwable t) {
                                     logger.error("Exception in autocomplete thread: ", t);
                                 }
@@ -423,9 +428,15 @@ public class CommandHandler {
     }
     
     @SuppressWarnings("unchecked")
-    private void handleAutocompleteResult(Object returned, AutocompletableData.Type type, AutocompleteInteraction interaction) {
+    private void handleAutocompleteResult(Object returned, AutocompletableData data, AutocompleteInteraction interaction, Object user_input) {
         logger.debug("handling autocomplete result: {}", returned);
-        var suggestions = (List<AutocompleteSuggestion<?>>) returned;
+        var suggestions = (List<? extends AutocompleteSuggestion<?>>) returned;
+
+        if (data.filter() != null) {
+            suggestions = data.filter().filter(suggestions, user_input);
+        }
+
+        var type = data.type();
 
         var list = new ArrayList<SlashCommandOptionChoice>();
         switch (type) {
@@ -1206,20 +1217,38 @@ public class CommandHandler {
                                         default -> throw new ParsingException("Invalid parameter type, only types supported by Discord can be used", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
                                     };
 
+                                    AutocompleteFilter filter = null;
+
+                                    var search_suggestions = supplier_method.getDeclaredAnnotation(SearchSuggestions.class);
+                                    if (search_suggestions != null) {
+                                        logger.trace("found SearchSuggestions in autocompleter method");
+
+                                        filter = new AutocompleteFilterData(
+                                            search_suggestions.at(),
+                                            search_suggestions.containedIn(),
+                                            search_suggestions.ignoreCase(),
+                                            search_suggestions.ignoreWhitespace(),
+                                            search_suggestions.ignorePunctuation(),
+                                            search_suggestions.pruneToLimit(),
+                                            search_suggestions.removeDuplicates(),
+                                            search_suggestions.contiguous()
+                                        );
+                                    }
+
                                     AutocompletableData data;
                                     if (supplier_class_is_target) {
                                         logger.trace("autocompleter method is in the same class as the command method, nonstatic methods are allowed");
                                         if (Modifier.isStatic(supplier_method.getModifiers())) {
-                                            data = new AutocompletableData(supplier_method, null, type, supplier_requires_interaction);
+                                            data = new AutocompletableData(supplier_method, null, type, supplier_requires_interaction, filter);
                                         } else {
-                                            data = new AutocompletableData(supplier_method, instance, type, supplier_requires_interaction);
+                                            data = new AutocompletableData(supplier_method, instance, type, supplier_requires_interaction, filter);
                                         }
                                     } else {
                                         logger.trace("autocompleter method is not in the same class as the command method, autocompleter method must be static");
                                         if (!Modifier.isStatic(supplier_method.getModifiers())) {
                                             throw new ParsingException("Autocomplete supplier method must be static if not in the same class", "in method " + supplier_class.getName() + "." + supplier_method_name + "(" + actual_class.getSimpleName() + ")");
                                         }
-                                        data = new AutocompletableData(supplier_method, null, type, supplier_requires_interaction);
+                                        data = new AutocompletableData(supplier_method, null, type, supplier_requires_interaction, filter);
                                     }
 
                                     supplier_method.setAccessible(true);

@@ -9,7 +9,9 @@ module canaryprism.slavacord {
     exports canaryprism.slavacord.exceptions;
     exports canaryprism.slavacord.autocomplete;
     exports canaryprism.slavacord.autocomplete.annotations;
+    exports canaryprism.slavacord.autocomplete.filteroptions;
 
     opens canaryprism.slavacord.data;
     opens canaryprism.slavacord.data.optionbounds;
+    opens canaryprism.slavacord.data.autocompletefilter;
 }
