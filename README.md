@@ -19,7 +19,7 @@ it uses Reflection and Annotations and such so that you write methods for a comm
 <dependency>
   <groupId>io.github.canary-prism</groupId>
   <artifactId>slavacord</artifactId>
-  <version>2.2.0</version>
+  <version>2.5.0</version>
 </dependency>
 ```
 ### Gradle:
@@ -137,9 +137,10 @@ here is a list of types that are supported by discord and this library:
 - `boolean`
 - `java.lang.Boolean`
 - `org.javacord.api.entity.user.User`
-- `org.javacord.api.entity.channel.ServerChannel`
+- `org.javacord.api.entity.channel.ServerChannel` or subtypes (see [Channel Type Bounds](#channel-type-bounds))
 - `org.javacord.api.entity.Role`
 - `org.javacord.api.entity.Mentionable`
+- `org.javacord.api.entity.Attachment`
 - any Enum
 
 Enums are automatically converted to longs with "option choices" on their ordinals for discord, then converted back for you
@@ -151,17 +152,17 @@ speaking of which
 the `@Option` parameter has the properties `longChoices` and `stringChoices` which let you turn these options into option *choices*, where the user can only select from a provided set of values, these are represented with annotations `@OptionChoiceLong` and `@OptionChoiceString` and are pretty much 1 to 1 with discord's api
 ```java
 // in command method parameter list..
-@Option(name = "day_of_week", stringChoices = {
-    @OptionChoiceString("Sunday"),
-    @OptionChoiceString("Monday"),
-    @OptionChoiceString("Tuesday"),
-    @OptionChoiceString("Wednesday"),
-    @OptionChoiceString("Thursday"),
-    @OptionChoiceString("Friday"),
-    @OptionChoiceString("Saturday"),
-}) String day_of_week
+@Option(name = "day_of_week", longChoices = {
+    @OptionChoiceLong(name = "Sunday", value = 0),
+    @OptionChoiceLong(name = "Monday", value = 1),
+    @OptionChoiceLong(name = "Tuesday", value = 2),
+    @OptionChoiceLong(name = "Wednesday", value = 3),
+    @OptionChoiceLong(name = "Thursday", value = 4),
+    @OptionChoiceLong(name = "Friday", value = 5),
+    @OptionChoiceLong(name = "Saturday", value = 6),
+}) long day_of_week
 ```
-(and the same concept applies for longs just with different names)
+(and the same concept applies for Strings just with different names)
 
 however the usage of these are not recommended because,,, just look at them they are ugly as sh-  
 thus it is almost always a better choice to just use enums as previously mentioned
@@ -181,6 +182,40 @@ enum DaysOfWeek {
 this uses the enums' literal names (defined by their identifiers in sourcecode) as the String keys for the option choices, however, if your enum implements `CustomChoiceName` then it will be the String returned by calling `getCustomName()`
 
 it is important to note that option choice names are not allowed to be more than 25 characters long. enums that don't have custom choice names will get their names trimmed to fit under the limit (however as of the current version the library does NOT make a check that the trimmed names are still mutually unique), but enums that *do* implement `CustomChoiceName`, as well as manual long or String option choices don't get this treatment
+
+### Option Bounds
+
+if you want your option to have some validation but not go so far as to use Option Choices you can use Option Bounds to limit the allowed values
+
+#### Basic Bounds
+
+you can use `@DoubleBounds` `@LongBounds` and `@StringLengthBounds` to limit `double`, `long`, and `String` options respectively
+```java
+// in command method parameter list...
+@DoubleBounds(min = -10, max = 10) @Option(name = "d") double d,
+@LongBounds(min = 0) @Option(name = "l") long l, // you can choose to only specify one of the bounds
+@StringLengthBounds(min = 1, max = 10) @Option(name = "str") String str // you can limit the String lengths too
+```
+these values are all inclusive (i think)
+
+### Channel Type Bounds
+
+you can also limit what kinds of channels are allowed with `@ChannelTypeBounds`
+```java
+// in command method parameter list...
+@ChannelTypeBounds({ ChannelType.SERVER_TEXT_CHANNEL, ChannelType.SERVER_VOICE_CHANNEL })
+@Option(name = "channel") ServerChannel channel
+```
+in this example users may only select a ServerTextChannel or ServerVoiceChannel for this slash command option
+
+because subtyping is fun you are also allowed to specify a **subtype** of `ServerChannel` in order to limit allowed channels that way
+```java
+// in command method parameter list...
+@Option(name = "text_channel") ServerTextChannel text_channel,
+@Option(name = "voice_channel") ServerVoiceChannel vc,
+```
+
+you can even use both methods at the same time, specify multiple specific channel types with `@ChannelTypeBounds` and declare the parameter's type as a subtype that they all share to minimise casting. however obviously all of the specified channel types must be able to be assigned to your parameter type
 
 ### Optional Command Arguments
 
@@ -254,7 +289,7 @@ Discord commands have a property called "Default Required Permissions" and it me
 in this library that's represented by annotating with `@RequiresPermissions()`, it takes an array of `PermissionType`s where any user must have all of them granted in order to execute the command
 
 ```java
-// in a commands class
+// in a commands class...
 @RequiresPermissions({ PermissionType.MANAGE_SERVER })
 @Command(name = "mewo", description = "mewo")
 void mewo() {}
@@ -283,6 +318,132 @@ it is obviously recommended to use this annotation for commands that require lon
 discord counts a command as "failed" if the bot has failed to submit a response within 3 seconds, so the `@Async` annotation also implicitly makes the handler *NOT* use an ImmediateResponder by default
 
 it instead uses a RespondLater, which tells discord that the command *has* gone through it just needs a bit before a proper response can be sent (in discord this is represented by the "BotName is thinking..." text)
+
+### Locales
+
+#### for Commands CommandGroups and Options
+you can add a localised name and/or description for a command or command group or option using the `@Trans` annotation (the Trans stands for Translation)
+```java
+// in a commands class...
+
+@Trans(locale = DiscordLocale.CHINESE_TAIWAN, description = "貓")
+@Trans(locale = DiscordLocale.JAPANESE, description = "ねこ")
+@CommandGroup(name = "kitty", description = "cat")
+class Kitty {
+    @Trans(locale = DiscordLocale.CHINESE_TAIWAN, name = "喵", description = "馬卡龍")
+    @Trans(locale = DiscordLocale.JAPANESE, name = "にゃー", description = "マカロン")
+    @Command(name = "meow", description = "macaron")
+    void meow(
+        @Trans(locale = DiscordLocale.CHINESE_TAIWAN, name = "使用者")
+        @Trans(locale = DiscordLocale.JAPANESE, name = "ユーザー")
+        @Option(name = "user") User user
+    ) {}
+}
+```
+
+for each annotation you are allowed to only provide the name or description or both. if the user's locale isn't in the provided localised names or options the default names and descriptions specified by the `@Command` or `@CommandGroup` or `@Option` annotation will be displayed
+
+#### for OptionChoices
+
+you can use `@OptionChoiceString` and `@OptionChoiceLong`'s `translations` property and set it to an array of `@OptionChoiceTrans` like so
+```java
+// in command method parameter list..
+@Option(name = "number", longChoices = {
+    @OptionChoiceLong(name = "zero", value = 0, translations = {
+        @OptionChoiceTrans(locale = DiscordLocale.CHINESE_TAIWAN, value = "零")
+        @OptionChoiceTrans(locale = DiscordLocale.JAPANESE, value = "ゼロ")
+    }),
+    @OptionChoiceLong(name = "one", value = 1, translations = {
+        @OptionChoiceTrans(locale = DiscordLocale.CHINESE_TAIWAN, value = "ㄧ")
+        @OptionChoiceTrans(locale = DiscordLocale.JAPANESE, value = "いち")
+    })
+}) long number
+```
+
+or if you're using an enum (recommended), you can implement `CustomChoiceName`'s `getCustomNameTranslations()` method
+```java
+// anywhere
+enum Numbers implements CustomChoiceName {
+    ZERO, ONE;
+
+    @Override
+    public String getCustomName() {
+        return switch (this) {
+            case ZERO -> "zero";
+            case ONE -> "one";
+        };
+    }
+
+    @Override
+    public Map<DiscordLocale, String> getCustomNameTranslations() {
+        return switch (this) {
+            case ZERO -> Map.of(
+                DiscordLocale.CHINESE_TAIWAN, "零",
+                DiscordLocale.JAPANESE, "ゼロ"
+            );
+            case ONE -> Map.of(
+                DiscordLocale.CHINESE_TAIWAN, "一",
+                DiscordLocale.JAPANESE, "いち"
+            );
+        };
+    }
+}
+```
+```java
+// in command method parameter list..
+@Option(name = "number") Numbers number
+```
+
+### Autocompletes
+
+this is probably the least intuitive part of the library,,,
+
+in Discord a `String` or `long` SlashCommandOption may be marked `autocompletable` which means that when the user starts typing in the option discord will send an event to your bot telling it what their current input is and you can respond by suggesting SlashCommandOptionChoices that the user may choose from
+
+**NOTE: unlike [Static Option Choices](#option-choices) these choices are NOT FORCED. the user is still free to enter any arbitrary value they like**
+
+it is due to this discrepancy that this library avoids the term "Option Choice" when talking about autocompletes and prefers "Suggestions"
+
+you mark a slash command option autocompletable by annotating it with `@Autocompletes`. you must specify the *class* and *name ofmethod* that will supply the autocomplete suggestions
+```java
+// in command method parameter list..
+@Autocompletes(autocompleterClass = Mewo.class, autocompleter = "getSuggestions") 
+@Option(name = "query") String query
+```
+the referenced method must then be an Autocompleter method, which must be a static method annotated with `@Autocompleter` that takes the parameters `(T)` or `(AutocompleteInteraction, T)` and returns `List<AutocompleteSuggestion<T>>`, where `T` is the type of the option. the passed `T` is the current value the user entered into the option
+```java
+// anywhere
+class Mewo {
+    @Autocompleter
+    static List<AutocompleteSuggestion<String>> getSuggestions(String partial_input) {
+        return List.of(
+            AutocompleteSuggestion.of("name", "value")
+        );
+    }
+}
+```
+
+currently in this example the Autocompleter method is responsible for taking the passed partial input into consideration when returning suggestions. i'll probably make a utility method that filters for only the suggestions that match the input later
+
+if your autocompleter method is in the same class as your command method, the syntax is slightly more convenient  
+you are allowed to only specify the autocompleter's method name, and your autocompleter method is allowed to be non-static as long as you passed in an instance to the command handler when registering your Commands class
+```java
+// in a commands class..
+
+@Command(name = "mewo", description = "mewo")
+void mewo(@Autocompletes(autocompleter = "getSuggestions") @Option(name = "text") String text) {
+}
+
+@Autocompleter
+List<AutocompleteSuggestion<String>> getSuggestions(AutocompleteInteraction interaction, String partial_input) {
+    // please do not attempt to respond with suggestions with the interaction yourself
+    return List.of(
+        AutocompleteSuggestion.of("name", "value")
+    );
+}
+```
+
+Autocompleter methods are allowed to be annotated with `@Async`
 
 ### Parsing Exception
 

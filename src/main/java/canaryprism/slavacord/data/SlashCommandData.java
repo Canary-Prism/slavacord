@@ -11,6 +11,7 @@ import org.javacord.api.interaction.SlashCommandBuilder;
 public record SlashCommandData(
     String name,
     String description,
+    LocalizationData localizations,
     boolean enabled_in_DMs,
     boolean nsfw,
     EnumSet<PermissionType> required_permissions,
@@ -18,7 +19,7 @@ public record SlashCommandData(
      * The server ID to register the command in. (0 for global)
      */
     long server_id,
-    List<SlashCommandOptionData<?>> options,
+    List<? extends SlashCommandOptionData<?>> options,
     Method method,
     Object instance,
     boolean requires_interaction
@@ -28,6 +29,7 @@ public record SlashCommandData(
         return toString(0);
     }
 
+    @SuppressWarnings("StringConcatenationInLoop")
     public String toString(int indent) {
         String indent_str = "    ".repeat(indent);
 
@@ -39,7 +41,7 @@ public record SlashCommandData(
         
 
 
-        if (options != null && options.size() > 0) {
+        if (options != null && !options.isEmpty()) {
             for (SlashCommandOptionData<?> option : options) {
                 value += "\n" + option.toString(indent + 1) + ",";
             }
@@ -53,13 +55,12 @@ public record SlashCommandData(
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof SlashCommandData) {
-            SlashCommandData other = (SlashCommandData) obj;
+        if (obj instanceof SlashCommandData other) {
 
             return name.equals(other.name) && description.equals(other.description)
                     && enabled_in_DMs == other.enabled_in_DMs && nsfw == other.nsfw && server_id == other.server_id
                     && Objects.equals(required_permissions, other.required_permissions)
-                    && (((options == null || options.isEmpty()) && (other.options() == null || other.options().isEmpty())) || options.equals(other.options));
+                    && (((options == null || options.isEmpty()) && (other.options() == null || other.options().isEmpty())) || Objects.equals(options, other.options));
         } else {
             return false;
         }
@@ -74,11 +75,14 @@ public record SlashCommandData(
         builder.setEnabledInDms(enabled_in_DMs);
         builder.setNsfw(nsfw);
 
+        localizations.names().forEach(builder::addNameLocalization);
+        localizations.descriptions().forEach(builder::addDescriptionLocalization);
+
         if (required_permissions != null) {
             builder.setDefaultEnabledForPermissions(required_permissions);
         }
 
-        if (options != null && options.size() > 0) {
+        if (options != null && !options.isEmpty()) {
             for (SlashCommandOptionData<?> option : options) {
                 builder.addOption(option.toSlashCommandOptionBuilder().build());
             }

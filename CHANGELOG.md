@@ -1,5 +1,26 @@
 # Changelog
 
+## v2.5.0
+- added support for Option Bounds
+- fixed Async throwing erroneous exception when applied directly to a command method in Java versions prior to 21
+- added just... so many logging calls.. turn on `TRACE` level logs and enjoy lmfto
+- opened internal Data classes for Reflection (have fun :3 (or not, there's really not that much there))
+
+## v2.4.1
+- attempts to make autocompleter method accessible in reflection
+- fixed bug where registering with `overwrites: false` just... doesn't work that well and often breaks
+
+## v2.4.0
+- added support for ATTACHMENT option type
+- added support for autocompletes
+
+## v2.3.0
+- added nsfw flag to commands and command group (not applicable to nested commands and command groups)
+- warn setting `setEnabledInDMs` in nested commands and command groups
+- updated RespondLater ReturnResponses to act like ImmediateResponders
+- added the ability to set localizations for commannds and commnand groups and options and option choices
+- added `getCustomNameTranslations()` method to `CustomChoiceName`
+
 ## v2.2.0
 - added `@RequiresPermissions` annotation to interface with discord's default required permissions
 - added support for the `DECIMAL` or `NUMBER` option type (whoops gues i just missed it all this time)

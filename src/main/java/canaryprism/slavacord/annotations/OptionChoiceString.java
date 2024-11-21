@@ -21,4 +21,11 @@ public @interface OptionChoiceString {
      * @return the string value of the choice
      */
     String value();
+
+    /**
+     * translations for the option choice names
+     * 
+     * @return a list of translations for the option choice name
+     */
+    OptionChoiceTrans[] translations() default {};
 }
