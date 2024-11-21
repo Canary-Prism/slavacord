@@ -7,8 +7,6 @@ import java.lang.annotation.Target;
 
 import org.javacord.api.interaction.DiscordLocale;
 
-import canaryprism.slavacord.annotations.internal.Translations;
-
 /**
  * Trans(lated) name and description for a Command or Option
  */
