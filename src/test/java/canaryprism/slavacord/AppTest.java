@@ -164,4 +164,25 @@ public class AppTest {
 
         handler.stop();
     }
+
+    @Test
+    public void boundedWildcardAutocompleteProviders() {
+        Configurator.setRootLevel(Level.TRACE);
+        var handler = new CommandHandler(new MockDiscordApi());
+
+        @CreateGlobal
+        class Mewo implements Commands {
+            @Command(name = "mewo", description = "mewo")
+            public void mewo(@Autocompletes(autocompleter = "autocompleter") @Option(name = "nya", description = "nya") String nya) {
+                // do nothing
+            }
+
+            @Autocompleter
+            public List<? extends AutocompleteSuggestion<? extends String>> autocompleter(String nya) {
+                return null;
+            }
+        }
+
+        handler.register(new Mewo(), true);
+    }
 }

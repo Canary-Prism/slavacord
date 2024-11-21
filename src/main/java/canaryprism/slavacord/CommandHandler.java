@@ -1670,28 +1670,49 @@ public class CommandHandler {
     }
 
     @SuppressWarnings("DuplicateExpressions")
-    private void validateAutocompleteSupplierMethod(Method method, Class<?> actual_class) {
+    private void validateAutocompleteSupplierMethod(Method method, Class<?> required_class) {
         logger.debug("validating autocomplete supplier method {}", method);
         var supplier_class = method.getDeclaringClass();
 
-        if (!(method.getGenericReturnType() instanceof ParameterizedType list_type
-                && list_type.getRawType() == List.class
-                && list_type.getActualTypeArguments()[0] instanceof ParameterizedType suggestion_type
-                && suggestion_type.getRawType() == AutocompleteSuggestion.class
-                && suggestion_type.getActualTypeArguments()[0] == actual_class)) {
 
-            throw new ParsingException(
-                    "Autocomplete supplier method must return List<AutocompleteSuggestion<"
-                            + actual_class.getSimpleName() + ">>",
-                    "in method " + supplier_class.getName() + "." + method.getName() + "("
-                            + actual_class.getSimpleName() + ")");
-        }
 
         if (method.getDeclaredAnnotation(Autocompleter.class) == null) {
             throw new ParsingException("Autocomplete supplier method must be annotated with @Autocompleter",
-                    "in method " + supplier_class.getName() + "." + method.getName() + "("
-                            + actual_class.getSimpleName() + ")");
+                    "in method " + supplier_class.getName() + "." + method.getName());
         }
+
+        logger.trace("checking method return type");
+        if (method.getGenericReturnType() instanceof ParameterizedType list_type
+            && list_type.getRawType() == List.class
+            && list_type.getActualTypeArguments().length == 1) {
+            logger.trace("return type rawtype is List");
+
+            var element_type = list_type.getActualTypeArguments()[0];
+            if (element_type instanceof WildcardType bounded_wildcard && bounded_wildcard.getUpperBounds().length == 1) {
+                logger.trace("List element type is bounded wildcard, unwrapping");
+                element_type = bounded_wildcard.getUpperBounds()[0];
+            }
+            if (element_type instanceof ParameterizedType data_type && data_type.getRawType() == AutocompleteSuggestion.class
+                && data_type.getActualTypeArguments().length == 1) {
+                logger.trace("List element rawtype is AutocompleteSuggestion");
+                var holding_type = data_type.getActualTypeArguments()[0];
+
+                if (holding_type instanceof WildcardType bounded_wildcard && bounded_wildcard.getUpperBounds().length == 1) {
+                    logger.trace("AutocompleteSuggestion element type is bounded wildcard, unwrapping");
+                    holding_type = bounded_wildcard.getUpperBounds()[0];
+                }
+
+                if (holding_type == required_class) {
+                    logger.trace("Autocomplete Suggestion element type is required class '{}', validation success", required_class);
+                    return;
+                }
+            }
+        }
+
+        throw new ParsingException(
+            "Autocomplete supplier method must return List<AutocompleteSuggestion<"
+                + required_class.getSimpleName() + ">>",
+            "in method " + supplier_class.getName() + "." + method.getName());
     }
 
     private Set<ChannelType> inferChannelTypeBounds(Class<?> parameter_type) {
