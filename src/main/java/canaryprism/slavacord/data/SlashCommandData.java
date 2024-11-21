@@ -29,6 +29,7 @@ public record SlashCommandData(
         return toString(0);
     }
 
+    @SuppressWarnings("StringConcatenationInLoop")
     public String toString(int indent) {
         String indent_str = "    ".repeat(indent);
 
@@ -40,7 +41,7 @@ public record SlashCommandData(
         
 
 
-        if (options != null && options.size() > 0) {
+        if (options != null && !options.isEmpty()) {
             for (SlashCommandOptionData<?> option : options) {
                 value += "\n" + option.toString(indent + 1) + ",";
             }
@@ -54,13 +55,12 @@ public record SlashCommandData(
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof SlashCommandData) {
-            SlashCommandData other = (SlashCommandData) obj;
+        if (obj instanceof SlashCommandData other) {
 
             return name.equals(other.name) && description.equals(other.description)
                     && enabled_in_DMs == other.enabled_in_DMs && nsfw == other.nsfw && server_id == other.server_id
                     && Objects.equals(required_permissions, other.required_permissions)
-                    && (((options == null || options.isEmpty()) && (other.options() == null || other.options().isEmpty())) || options.equals(other.options));
+                    && (((options == null || options.isEmpty()) && (other.options() == null || other.options().isEmpty())) || Objects.equals(options, other.options));
         } else {
             return false;
         }
@@ -82,7 +82,7 @@ public record SlashCommandData(
             builder.setDefaultEnabledForPermissions(required_permissions);
         }
 
-        if (options != null && options.size() > 0) {
+        if (options != null && !options.isEmpty()) {
             for (SlashCommandOptionData<?> option : options) {
                 builder.addOption(option.toSlashCommandOptionBuilder().build());
             }
