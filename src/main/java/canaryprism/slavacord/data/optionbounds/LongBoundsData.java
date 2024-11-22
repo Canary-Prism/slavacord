@@ -11,8 +11,11 @@ public record LongBoundsData(long min, long max) implements OptionBoundsData {
 
     @Override
     public void apply(SlashCommandOptionBuilder builder) {
-        builder.setLongMinValue(min);
-        builder.setLongMaxValue(max);
+        if (min != Long.MIN_VALUE)
+            builder.setLongMinValue(min);
+
+        if (max != Long.MAX_VALUE)
+            builder.setLongMaxValue(max);
     }
     
 }

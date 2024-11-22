@@ -15,6 +15,8 @@ public record StringLengthBoundsData(long min, long max) implements OptionBounds
     @Override
     public void apply(SlashCommandOptionBuilder builder) {
         builder.setMinLength(min);
-        builder.setMaxLength(max);
+
+        if (max != Long.MAX_VALUE)
+            builder.setMaxLength(max);
     }
 }
