@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.6.0
+- added autocomplete suggestion search and filtering functionality
+- loosened restrictions on autocompleter signatures so that primitive and boxed types are allowed as well as bounded wildcards
+- fixed bug where `@Trans` wasn't properly repeatable because the container type `@Translations` was module private
+- cleaned up code a bit thanks to intellij inspection (please stop yelling about unused public stuff and not using diamond though)
+
 ## v2.5.0
 - added support for Option Bounds
 - fixed Async throwing erroneous exception when applied directly to a command method in Java versions prior to 21

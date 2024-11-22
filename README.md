@@ -423,8 +423,6 @@ class Mewo {
 }
 ```
 
-currently in this example the Autocompleter method is responsible for taking the passed partial input into consideration when returning suggestions. i'll probably make a utility method that filters for only the suggestions that match the input later
-
 if your autocompleter method is in the same class as your command method, the syntax is slightly more convenient  
 you are allowed to only specify the autocompleter's method name, and your autocompleter method is allowed to be non-static as long as you passed in an instance to the command handler when registering your Commands class
 ```java
@@ -444,6 +442,12 @@ List<AutocompleteSuggestion<String>> getSuggestions(AutocompleteInteraction inte
 ```
 
 Autocompleter methods are allowed to be annotated with `@Async`
+
+currently in this example the Autocompleter method is responsible for taking the passed partial input into consideration when returning suggestions.
+
+### Searching in AutocompleteSuggestions
+
+if you annotate an autocompleter with `@SearchSuggestions` the command handler will take your returned suggestions and match them with the user's input in a manner as specified by the properties in the annotation. this essentially offloads the job of actually providing suggestions tailored to the user's input to the command handler
 
 ### Parsing Exception
 
