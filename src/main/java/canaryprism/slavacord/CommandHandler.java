@@ -74,7 +74,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public class CommandHandler {
 
-    private static final Logger logger = LogManager.getLogger();
+    private static final Logger logger = LogManager.getLogger(CommandHandler.class);
 
     private final DiscordApi api;
 
