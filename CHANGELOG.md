@@ -1,6 +1,7 @@
 # Changelog
 
 ## v2.6.0
+- fixed bug where duplicate command names registered across different servers would cause incorrect ones to be called
 - added autocomplete suggestion search and filtering functionality
 - loosened restrictions on autocompleter signatures so that primitive and boxed types are allowed as well as bounded wildcards
 - fixed bug where `@Trans` wasn't properly repeatable because the container type `@Translations` was module private
