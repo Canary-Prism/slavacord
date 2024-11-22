@@ -50,10 +50,12 @@ public record AutocompleteFilterData(
     private boolean matches(String suggestion, String input) {
         if (ignore_whitespace) {
             suggestion = WHITESPACE.matcher(suggestion).replaceAll("");
+            input = WHITESPACE.matcher(input).replaceAll("");
         }
 
         if (ignore_punctuation) {
             suggestion = PUNCTUATION.matcher(suggestion).replaceAll("");
+            input = PUNCTUATION.matcher(input).replaceAll("");
         }
 
         if (ignore_case) {
