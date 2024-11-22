@@ -185,4 +185,25 @@ public class AppTest {
 
         handler.register(new Mewo(), true);
     }
+
+    @Test
+    public void mixingBoxingTypesAutocompleter() {
+        Configurator.setRootLevel(Level.TRACE);
+        var handler = new CommandHandler(new MockDiscordApi());
+
+        @CreateGlobal
+        class Mewo implements Commands {
+            @Command(name = "mewo", description = "mewo")
+            public void mewo(@Autocompletes(autocompleter = "autocompleter") @Option(name = "nya", description = "nya") long nya) {
+                // do nothing
+            }
+
+            @Autocompleter
+            public List<? extends AutocompleteSuggestion<? extends Long>> autocompleter(long nya) {
+                return null;
+            }
+        }
+
+        handler.register(new Mewo(), true);
+    }
 }
