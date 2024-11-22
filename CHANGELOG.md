@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.6.1
+- fixed bug where if `@SearchSuggestions` ignoreWhitespace or ignorePunctuation was set to true, user input containing whitespace or punctuation wouldn't match anything
+
 ## v2.6.0
 - fixed bug where duplicate command names registered across different servers would cause incorrect ones to be called
 - added autocomplete suggestion search and filtering functionality
