@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.6.2
+- changed getLogger call to pass explicit CommandHandler.class (i guess the inferred one breaks sometimes)
+- fixed bug where option bounds of undefined defaults would try to apply their default values when submitting commands
+
 ## v2.6.1
 - fixed bug where if `@SearchSuggestions` ignoreWhitespace or ignorePunctuation was set to true, user input containing whitespace or punctuation wouldn't match anything
 
