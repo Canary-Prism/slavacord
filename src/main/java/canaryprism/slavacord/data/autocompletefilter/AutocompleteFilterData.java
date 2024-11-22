@@ -71,16 +71,20 @@ public record AutocompleteFilterData(
             var input_chars = input.toCharArray();
             int suggestion_pointer = 0;
 
-            match_loop: {
+            match_test: {
+                if (match_start == MatchStart.BEGGINING) {
+                    if (input_chars[0] != suggestion_chars[0])
+                        break match_test;
+                }
                 for (char input_char : input_chars) {
                     if (suggestion_pointer >= suggestion_chars.length)
-                        break match_loop;
+                        break match_test;
 
                     while (input_char != suggestion_chars[suggestion_pointer]) {
                         suggestion_pointer++;
 
                         if (suggestion_pointer >= suggestion_chars.length)
-                            break match_loop;
+                            break match_test;
                     }
                     suggestion_pointer++;
                 }
