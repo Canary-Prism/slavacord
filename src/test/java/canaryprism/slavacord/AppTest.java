@@ -199,7 +199,7 @@ public class AppTest {
             }
 
             @Autocompleter
-            public List<? extends AutocompleteSuggestion<? extends Long>> autocompleter(long nya) {
+            public List<? extends AutocompleteSuggestion<? extends Long>> autocompleter() {
                 return null;
             }
         }
