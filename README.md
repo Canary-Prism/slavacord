@@ -19,7 +19,7 @@ it uses Reflection and Annotations and such so that you write methods for a comm
 <dependency>
   <groupId>io.github.canary-prism</groupId>
   <artifactId>slavacord</artifactId>
-  <version>2.6.2</version>
+  <version>3.0.0</version>
 </dependency>
 ```
 ### Gradle:
@@ -398,7 +398,7 @@ enum Numbers implements CustomChoiceName {
 
 this is probably the least intuitive part of the library,,,
 
-in Discord a `String` or `long` SlashCommandOption may be marked `autocompletable` which means that when the user starts typing in the option discord will send an event to your bot telling it what their current input is and you can respond by suggesting SlashCommandOptionChoices that the user may choose from
+in Discord a `String` or `long` SlashCommandOption may be marked `@Autocompletable` which means that when the user starts typing in the option discord will send an event to your bot telling it what their current input is and you can respond by suggesting SlashCommandOptionChoices that the user may choose from
 
 **NOTE: unlike [Static Option Choices](#option-choices) these choices are NOT FORCED. the user is still free to enter any arbitrary value they like**
 
@@ -410,7 +410,7 @@ you mark a slash command option autocompletable by annotating it with `@Autocomp
 @Autocompletes(autocompleterClass = Mewo.class, autocompleter = "getSuggestions") 
 @Option(name = "query") String query
 ```
-the referenced method must then be an Autocompleter method, which must be a static method annotated with `@Autocompleter` that takes the parameters `(T)` or `(AutocompleteInteraction, T)` and returns `List<AutocompleteSuggestion<T>>`, where `T` is the type of the option. the passed `T` is the current value the user entered into the option
+the referenced method must then be an Autocompleter method, which must be a static method annotated with `@Autocompleter` that its parameters are only ever of the type `AutocompleteInteraction` or `T` where each type appears at most once and has a return type assignable to `List<? extends AutocompleteSuggestion<? extends T>>`, where `T` is the type of the option. the passed `T` is the current value the user has entered into the option
 ```java
 // anywhere
 class Mewo {

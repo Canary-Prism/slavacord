@@ -1,5 +1,16 @@
 # Changelog
 
+## v3.0.0
+- renamed all enum constants to be SCREAMING_SNAKE_CASE
+- removed `@Target`s of `@OptionChoiceLong` and `@OptionChoiceString`. you are no longer allowed to annotate them on anything (it never actually did anything anyway)
+- now throws an exception when `enabledInDMs` is set to `false` for nested Commands or CommandGroups
+- disallowed returning a blank String from a `@ReturnsResponse` method, it now throws an exception instead of just cancelling the response
+- changed it so only **empty** `@CommandGroup` `description`s will be automatically filled in instead of *blank* strings
+- `CommandHandler::setDefaultThreadingMode` now throws an exception if you try to set it to `VIRTUAL` on a JVM without Virtual Threads. it also throws an exception if you try to set it to `NONE`
+- `ThreadingMode.PREFER_VIRTUAL` now fallbacks to `DAEMON` instead of `PLATFORM` to better mimick the semantics of Virtual Threads (which never keep JVM alive)
+- changed Autocompleter method search logic so now the only requirements for the **parameters** the method takes is that they are only ever of the type `AutocompleteInteraction` or `T` where `T` is the type of the option, and each type appears at most once. in other words the parameter types `(AutocompleteInteraction, T)`, `(T, AutocompleteInteraction)`, `(T)`, `(AutocompleteInteraction)`, and `()` are all valid
+- `@LongBounds` and `@DoubleBounds` are now checked at parsing time for values that exceed discord's limits
+
 ## v2.6.2
 - changed getLogger call to pass explicit CommandHandler.class (i guess the inferred one breaks sometimes)
 - fixed bug where option bounds of undefined defaults would try to apply their default values when submitting commands
