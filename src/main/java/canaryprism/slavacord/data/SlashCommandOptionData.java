@@ -66,8 +66,7 @@ public record SlashCommandOptionData<T>(
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof SlashCommandOptionData) {
-            SlashCommandOptionData<?> other = (SlashCommandOptionData<?>) obj;
+        if (obj instanceof SlashCommandOptionData<?> other) {
 
             return name.equals(other.name) && description.equals(other.description)
                     && required == other.required && type == other.type
