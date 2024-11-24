@@ -1,3 +1,7 @@
+/**
+ * the module for the Slavacord library.
+ * <a href="https://github.com/Canary-Prism/slavacord">Github Repo</a>
+ */
 module canaryprism.slavacord {
     requires transitive org.javacord.api;
     requires org.apache.logging.log4j;
