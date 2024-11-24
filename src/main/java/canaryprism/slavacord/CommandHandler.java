@@ -306,11 +306,11 @@ public class CommandHandler {
                         } catch (Throwable e) {
                             logger.error("Exception in command execution thread", e);
                         }
-                    }, (async.threadingMode() != ThreadingMode.none)? async.threadingMode() : threading_mode);
+                    }, (async.threadingMode() != ThreadingMode.NONE)? async.threadingMode() : threading_mode);
                 }
 
 
-            
+
             } else {
                 logger.trace("command segment is not final, looking for next segments");
                 if (options == null) {
@@ -382,7 +382,7 @@ public class CommandHandler {
                             logger.trace("Method requires interaction, adding interaction to parameters");
                             parameters.add(interaction);
                         }
-                        
+
                         var opt_value = switch (autocompletable_data.type()) {
                             case STRING -> interaction_options.getArgumentStringValueByName(focused_option.getName());
                             case LONG -> interaction_options.getArgumentLongValueByName(focused_option.getName());
@@ -411,11 +411,11 @@ public class CommandHandler {
                                 } catch (Throwable t) {
                                     logger.error("Exception in autocomplete thread: ", t);
                                 }
-                            }, (async.threadingMode() != ThreadingMode.none)? async.threadingMode() : threading_mode);
+                            }, (async.threadingMode() != ThreadingMode.NONE)? async.threadingMode() : threading_mode);
                         }
                     }
                 }
-            
+
             } else {
                 logger.trace("command segment is not final, looking for next segments");
                 if (options == null) {
@@ -433,7 +433,7 @@ public class CommandHandler {
         }
 
     }
-    
+
     @SuppressWarnings("unchecked")
     private void handleAutocompleteResult(Object returned, AutocompletableData data, AutocompleteInteraction interaction, Object user_input) {
         logger.debug("handling autocomplete result: {}", returned);
@@ -466,14 +466,20 @@ public class CommandHandler {
             });
     }
 
-    private volatile ThreadingMode threading_mode = ThreadingMode.prefervirtual;
+    private volatile ThreadingMode threading_mode = ThreadingMode.PREFER_VIRTUAL;
 
     /**
      * <p>sets the default threading mode that is used when a command doesn't specify what mode to use itself</p>
-     * <p>default value is {@link ThreadingMode#prefervirtual}
+     * <p>default value is {@link ThreadingMode#PREFER_VIRTUAL}
      * @param mode the mode to use
      */
     public void setDefaultThreadingMode(ThreadingMode mode) {
+        if (mode == ThreadingMode.NONE) {
+            throw new IllegalArgumentException("ThreadingMode.none is not allowed here");
+        }
+        if (mode == ThreadingMode.VIRTUAL && vthread_ex.isEmpty()) {
+            throw new UnsupportedOperationException("No virtual thread support found for this JVM");
+        }
         threading_mode = mode;
     }
 
@@ -488,7 +494,7 @@ public class CommandHandler {
         Optional<ExecutorService> handle = Optional.empty();
         try {
             logger.trace("checking for virtual thread support");
-            
+
             @SuppressWarnings("JavaReflectionMemberAccess")
             var vthread_executor_getter = Class.forName("java.util.concurrent.Executors").getDeclaredMethod("newVirtualThreadPerTaskExecutor");
             handle = Optional.of((ExecutorService)vthread_executor_getter.invoke(null));
@@ -502,11 +508,11 @@ public class CommandHandler {
 
     private static void dispatchThreaded(Runnable runnable, ThreadingMode mode) {
         var dispatcher = switch (mode) {
-            case platform -> osthread_ex;
-            case virtual -> vthread_ex.orElseThrow(() -> new UnsupportedOperationException("No virtual thread support found for this JVM"));
-            case daemon -> daemonthread_ex;
-            case prefervirtual -> vthread_ex.orElse(osthread_ex);
-            case none -> throw new UnsupportedOperationException("ThreadingMode.none is not allowed here");
+            case PLATFORM -> osthread_ex;
+            case VIRTUAL -> vthread_ex.orElseThrow(() -> new UnsupportedOperationException("No virtual thread support found for this JVM"));
+            case DAEMON -> daemonthread_ex;
+            case PREFER_VIRTUAL -> vthread_ex.orElse(daemonthread_ex);
+            case NONE -> throw new UnsupportedOperationException("ThreadingMode.none is not allowed here");
         };
 
         dispatcher.submit(runnable);
@@ -546,14 +552,10 @@ public class CommandHandler {
                  * but it's likely also a developer error
                  * because of this, we log a warning
                  */
-
-                logger.warn("""
-                    Command with @ReturnsResponse returned a blank string!
-                    CommandHandler will interpret this as returning without responding to the interaction FOR NOW, but this is likely a developer error.
-                    prefer returning null or an empty Optional<String> instead of a blank string to not respond to the interaction.
+                throw new IllegalArgumentException("""
+                    Invalid return value for @ReturnsResponse. you may not return a blank String
+                    if you want to not respond to the interaction, return null or an empty Optional<String> instead
                     """);
-
-                return Optional.empty();
             }
 
             text = str;
@@ -581,14 +583,14 @@ public class CommandHandler {
     }
 
     private void processImmediateRespond(SlashCommandInteraction interaction, ReturnsResponse returns_response, Type return_type, Object returned) {
-        
+
         var opt_text = getReturnedResponse(return_type, returned);
         if (opt_text.isEmpty()) {
             return;
         }
         
         var text = opt_text.get();
-        
+
         logger.debug("processing immediate response of '{}'", text);
         var responder = interaction.createImmediateResponder();
 
@@ -911,7 +913,7 @@ public class CommandHandler {
                     if (method.getReturnType() != String.class
                         && !method.getGenericReturnType().equals(OPTIONAL_OF_STRING))
                         throw new ParsingException("Method with @ReturnsResponse must return a String or Optional<String>", "in method " + target.getName() + "." + method.getName());
-    
+
                     if (returns_response.ephemeral() && returns_response.silent())
                         throw new ParsingException("@ReturnsResponse cannot have both ephemeral and silent set to true", "in method " + target.getName() + "." + method.getName());
                 }
@@ -920,14 +922,14 @@ public class CommandHandler {
                 if (async != null) {
                     logger.trace("found @Async on method");
 
-                    if (vthread_ex.isEmpty() && async.threadingMode() == ThreadingMode.virtual)
+                    if (vthread_ex.isEmpty() && async.threadingMode() == ThreadingMode.VIRTUAL)
                         throw new ParsingException("Virtual threads are not supported on this JVM", "in method " + target.getName() + "." + method.getName());
                 }
 
                 var name = command.name();
                 var description = command.description();
 
-                var localizations = parseLocalizationData(method.getDeclaredAnnotationsByType(Trans.class), 
+                var localizations = parseLocalizationData(method.getDeclaredAnnotationsByType(Trans.class),
                         "in method " + target.getName() + "." + method.getName());
 
                 boolean skip_next_interaction_parameter = false;
@@ -1007,7 +1009,7 @@ public class CommandHandler {
                             option_description = option_name;
                         }
 
-                        var option_localizations = parseLocalizationData(parameter.getDeclaredAnnotationsByType(Trans.class), 
+                        var option_localizations = parseLocalizationData(parameter.getDeclaredAnnotationsByType(Trans.class),
                                 "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
 
                         var option_required = !(parameter_type instanceof ParameterizedType pt && pt.getRawType().equals(Optional.class));
@@ -1067,7 +1069,7 @@ public class CommandHandler {
                             if (min > max) {
                                 throw new ParsingException("DoubleBounds min must be less than or equal to max", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
                             }
-                            
+
                             if (min <= -0x20000000000000L && max >= 0x20000000000000L) {
                                 logger.warn("""
                                         DoubleBounds has no effect
@@ -1146,7 +1148,7 @@ public class CommandHandler {
                                 }
                                 var supplier_class_is_target = (supplier_class == target);
                                 var supplier_method_name = autocomplete.autocompleter();
-    
+
                                 try {
                                     logger.debug("attempting to resolve autocomplete supplier method for parameter {}.{}({} {})", target::getName, method::getName, parameter_type::toString, parameter::getName);
 
@@ -1200,22 +1202,22 @@ public class CommandHandler {
                                     supplier_method.setAccessible(true);
 
                                     options.add(new SlashCommandOptionData<String>(
-                                        option_name, 
-                                        option_description, 
+                                        option_name,
+                                        option_description,
                                         option_localizations,
-                                        option_required, 
-                                        option_type, 
-                                        null, 
+                                        option_required,
+                                        option_type,
                                         null,
-                                        data, 
-                                        null, 
-                                        null, 
+                                        null,
+                                        data,
+                                        null,
+                                        null,
                                         false,
                                         false,
                                         bounds_data
                                     ));
-                                    
-    
+
+
                                 } catch (NoSuchMethodException | SecurityException e) {
                                     throw new ParsingException("Autocompleter method not found, an Autocompleter method can only take the parameters (" + actual_class.getSimpleName() + ") or (AutocompleteInteraction, " + actual_class.getSimpleName() + ")", "at class " + supplier_class.getName(), e);
                                 } catch (ParsingException e) {
@@ -1244,7 +1246,7 @@ public class CommandHandler {
                                 option_name, 
                                 option_description, 
                                 option_localizations,
-                                option_required, 
+                                option_required,
                                 option_type, 
                                 null, 
                                 optionchoices, 
@@ -1267,7 +1269,7 @@ public class CommandHandler {
                             }
                             for (var choice : option_long_choices) {
                                 optionchoices.add(new SlashCommandOptionChoiceData<Long>(
-                                    choice.name(), 
+                                    choice.name(),
                                     choice.value(),
                                     parseOptionChoiceTranslations(choice.translations(), "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")")
                                 ));
@@ -1276,7 +1278,7 @@ public class CommandHandler {
                                 option_name, 
                                 option_description, 
                                 option_localizations,
-                                option_required, 
+                                option_required,
                                 option_type, 
                                 null, 
                                 optionchoices, 
@@ -1328,11 +1330,11 @@ public class CommandHandler {
                                 option_name, 
                                 option_description, 
                                 option_localizations,
-                                option_required, 
+                                option_required,
                                 option_type, 
                                 null, 
                                 optionchoices, 
-                                null, 
+                                null,
                                 null,
                                 null,
                                 false,
@@ -1346,10 +1348,10 @@ public class CommandHandler {
                                 option_name, 
                                 option_description, 
                                 option_localizations,
-                                option_required, 
+                                option_required,
                                 option_type, 
-                                null, 
-                                null, 
+                                null,
+                                null,
                                 null, 
                                 null,
                                 null,
@@ -1390,7 +1392,7 @@ public class CommandHandler {
                         name, 
                         description, 
                         localizations,
-                        (server_id == 0) && command.enabledInDMs(), 
+                        (server_id == 0) && command.enabledInDMs(),
                         command.nsfw(),
                         Optional.ofNullable(permissions).map((e) -> (e.isEmpty()) ? EnumSet.noneOf(PermissionType.class) : EnumSet.copyOf(e)).orElse(null),
                         server_id, 
@@ -1409,20 +1411,18 @@ public class CommandHandler {
                             "in method " + target.getName() + "." + method.getName());
                     }
                     if (!command.enabledInDMs()) {
-                        logger.error("""
-                            enabledInDMs = false has no effect in nested commands or command groups, this will become an exception later
-                                in method {}.{}
-                            """, target.getName(), method.getName());
+                        throw new ParsingException("enabledInDMs = false is not allowed in nested commands or command groups",
+                            "in method " + target.getName() + "." + method.getName());
                     }
                     ((ArrayList<SlashCommandOptionData<?>>) target_list).add(new SlashCommandOptionData<Long>(
                         name, 
                         description, 
                         localizations,
-                        false, 
+                        false,
                         org.javacord.api.interaction.SlashCommandOptionType.SUB_COMMAND, 
                         options, 
                         null, 
-                        null, 
+                        null,
                         method,
                         instance,
                         requires_interaction,
@@ -1442,10 +1442,10 @@ public class CommandHandler {
                 var name = group_of_commands.name();
                 var description = group_of_commands.description();
 
-                var localizations = parseLocalizationData(group.getDeclaredAnnotationsByType(Trans.class), 
+                var localizations = parseLocalizationData(group.getDeclaredAnnotationsByType(Trans.class),
                         "at class " + target.getName());
 
-                if (description.isBlank()) {
+                if (description.isEmpty()) {
                     logger.trace("description is blank, using name '{}' as description", name);
                     description = name;
                 }
@@ -1513,8 +1513,8 @@ public class CommandHandler {
                     ((ArrayList<SlashCommandData>) target_list).add(new SlashCommandData(
                         name, 
                         description, 
-                        localizations, 
-                        (server_id == 0) && group_of_commands.enabledInDMs(), 
+                        localizations,
+                        (server_id == 0) && group_of_commands.enabledInDMs(),
                         group_of_commands.nsfw(),
                         Optional.ofNullable(permissions).map((e) -> (e.isEmpty()) ? EnumSet.noneOf(PermissionType.class) : EnumSet.copyOf(e)).orElse(null),
                         server_id, 
@@ -1533,20 +1533,19 @@ public class CommandHandler {
                                 "at class " + target.getName());
                     }
                     if (!group_of_commands.enabledInDMs()) {
-                        logger.error("""
-                            enabledInDMs = false has no effect in nested commands or command groups, this will become an exception later
-                                at class {}
-                            """, target.getName());
+                        throw new ParsingException(
+                                "enabledInDMs = false is not allowed in nested commands or command groups",
+                                "at class " + target.getName());
                     }
                     ((ArrayList<SlashCommandOptionData<?>>) target_list).add(new SlashCommandOptionData<Long>(
                         name, 
                         description, 
-                        localizations, 
-                        false, 
+                        localizations,
+                        false,
                         org.javacord.api.interaction.SlashCommandOptionType.SUB_COMMAND_GROUP, 
                         options, 
-                        null, 
-                        null, 
+                        null,
+                        null,
                         null,
                         null,
                         true,
@@ -1813,15 +1812,15 @@ public class CommandHandler {
         var bounds = switch (type) {
             case CHANNEL -> new ChannelTypeBoundsData(option.getChannelTypes());
             case DECIMAL -> new DoubleBoundsData(
-                option.getDecimalMinValue().orElse(Double.MIN_NORMAL), 
+                option.getDecimalMinValue().orElse(Double.MIN_NORMAL),
                 option.getDecimalMaxValue().orElse(Double.MAX_VALUE)
             );
             case LONG -> new LongBoundsData(
-                option.getLongMinValue().orElse(Long.MIN_VALUE), 
+                option.getLongMinValue().orElse(Long.MIN_VALUE),
                 option.getLongMaxValue().orElse(Long.MAX_VALUE)
             );
             case STRING -> new StringLengthBoundsData(
-                option.getMinLength().orElse(0L), 
+                option.getMinLength().orElse(0L),
                 option.getMaxLength().orElse(Long.MAX_VALUE)
             );
             default -> null;

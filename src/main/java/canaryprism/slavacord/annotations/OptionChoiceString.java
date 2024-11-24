@@ -7,7 +7,7 @@ import java.lang.annotation.Target;
  * <p>an option choice of type {@code java.lang.String}</p>
  */
 @Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
-@Target({ java.lang.annotation.ElementType.PARAMETER })
+@Target({})
 public @interface OptionChoiceString {
 
     /**
