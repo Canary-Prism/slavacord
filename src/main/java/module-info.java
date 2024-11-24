@@ -13,5 +13,6 @@ module canaryprism.slavacord {
 
     opens canaryprism.slavacord.data;
     opens canaryprism.slavacord.data.optionbounds;
-    opens canaryprism.slavacord.data.autocompletefilter;
+    opens canaryprism.slavacord.data.autocomplete;
+    opens canaryprism.slavacord.data.autocomplete.filter;
 }

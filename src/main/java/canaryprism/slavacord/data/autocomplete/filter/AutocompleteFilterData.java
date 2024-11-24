@@ -1,4 +1,4 @@
-package canaryprism.slavacord.data.autocompletefilter;
+package canaryprism.slavacord.data.autocomplete.filter;
 
 import canaryprism.slavacord.autocomplete.AutocompleteSuggestion;
 import canaryprism.slavacord.autocomplete.filteroptions.MatchIn;

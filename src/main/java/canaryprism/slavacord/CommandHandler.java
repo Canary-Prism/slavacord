@@ -8,24 +8,17 @@ import java.lang.invoke.MethodType;
 import java.lang.annotation.Annotation;
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.*;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.NoSuchElementException;
-import java.util.Objects;
+import java.util.stream.Stream;
 
 import canaryprism.slavacord.autocomplete.annotations.SearchSuggestions;
-import canaryprism.slavacord.data.autocompletefilter.AutocompleteFilter;
-import canaryprism.slavacord.data.autocompletefilter.AutocompleteFilterData;
+import canaryprism.slavacord.data.autocomplete.AutocompletableData;
+import canaryprism.slavacord.data.autocomplete.filter.AutocompleteFilter;
+import canaryprism.slavacord.data.autocomplete.filter.AutocompleteFilterData;
 import canaryprism.slavacord.util.Reflection;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -360,7 +353,7 @@ public class CommandHandler {
                         var autocompletable_data = e.autocompletable_data();
                         var method = autocompletable_data.method();
                         var instance = autocompletable_data.instance();
-                        var requires_interaction = autocompletable_data.requires_interaction();
+
                         if (!methodmap.containsKey(method)) {
                             try {
                                 logger.trace("unreflecting Method to MethodHandle: {}", method);
@@ -378,11 +371,6 @@ public class CommandHandler {
                             parameters.add(Objects.requireNonNull(instance, "Instance not found for non-static method"));
                         }
 
-                        if (requires_interaction) {
-                            logger.trace("Method requires interaction, adding interaction to parameters");
-                            parameters.add(interaction);
-                        }
-
                         var opt_value = switch (autocompletable_data.type()) {
                             case STRING -> interaction_options.getArgumentStringValueByName(focused_option.getName());
                             case LONG -> interaction_options.getArgumentLongValueByName(focused_option.getName());
@@ -390,7 +378,12 @@ public class CommandHandler {
 
                         var user_input = opt_value.orElseThrow();
 
-                        parameters.add(user_input);
+                        for (var param : autocompletable_data.params()) {
+                            parameters.add(switch (param) {
+                                case INTERACTION -> interaction;
+                                case VALUE -> user_input;
+                            });
+                        }
 
                         final Async async = method.getDeclaredAnnotation(Async.class);
 
@@ -1154,8 +1147,8 @@ public class CommandHandler {
 
                                     var autocompleter = obtainAutocompleterMethod(supplier_class, supplier_method_name, actual_class);
 
-                                    var supplier_method = autocompleter.method;
-                                    var supplier_requires_interaction = autocompleter.requiresInteraction;
+                                    var supplier_method = autocompleter.method();
+                                    var params = autocompleter.param();
 
                                     validateAutocompleteSupplierMethod(supplier_method, actual_class);
 
@@ -1187,16 +1180,16 @@ public class CommandHandler {
                                     if (supplier_class_is_target) {
                                         logger.trace("autocompleter method is in the same class as the command method, nonstatic methods are allowed");
                                         if (Modifier.isStatic(supplier_method.getModifiers())) {
-                                            data = new AutocompletableData(supplier_method, null, type, supplier_requires_interaction, filter);
+                                            data = new AutocompletableData(supplier_method, null, type, params, filter);
                                         } else {
-                                            data = new AutocompletableData(supplier_method, instance, type, supplier_requires_interaction, filter);
+                                            data = new AutocompletableData(supplier_method, instance, type, params, filter);
                                         }
                                     } else {
                                         logger.trace("autocompleter method is not in the same class as the command method, autocompleter method must be static");
                                         if (!Modifier.isStatic(supplier_method.getModifiers())) {
                                             throw new ParsingException("Autocomplete supplier method must be static if not in the same class", "in method " + supplier_class.getName() + "." + supplier_method_name + "(" + actual_class.getSimpleName() + ")");
                                         }
-                                        data = new AutocompletableData(supplier_method, null, type, supplier_requires_interaction, filter);
+                                        data = new AutocompletableData(supplier_method, null, type, params, filter);
                                     }
 
                                     supplier_method.setAccessible(true);
@@ -1614,111 +1607,66 @@ public class CommandHandler {
         return map;
     }
 
-    private record AutocompleterMethod(Method method, boolean requiresInteraction) {
+    record AutocompleterMethod(Method method, AutocompletableData.Param[] param) {
     }
 
     private AutocompleterMethod obtainAutocompleterMethod(Class<?> supplier_class, String supplier_method_name, Class<?> parameter_class) throws NoSuchMethodException {
 
-        NoSuchMethodException nsme = null;
-        Method supplier_method_with_interaction = null;
-        try {
-            var primitive_type = Reflection.toPrimitiveType(parameter_class);
-            logger.debug("trying to find autocompleter method with primitive and AutocompleteInteraction parameter");
-            supplier_method_with_interaction = supplier_class.getDeclaredMethod(supplier_method_name, AutocompleteInteraction.class, primitive_type);
-        } catch (NoSuchMethodException e) {
-            logger.debug("autocompleter method with primitive and AutocompleteInteraction parameter not found");
-            nsme = e;
-        }
-        try {
-            var class_type = Reflection.toBoxedType(parameter_class);
-            logger.debug("trying to find autocompleter method with class type and AutocompleteInteraction parameter");
-            var m = supplier_class.getDeclaredMethod(supplier_method_name, AutocompleteInteraction.class, class_type);
+        var methods = Stream.of(supplier_class.getDeclaredMethods())
+            .filter((e) ->
+                e.getName().equals(supplier_method_name)
+                && e.getDeclaredAnnotation(Autocompleter.class) != null
+            )
+            .filter((e) -> {
+                try {
+                    validateAutocompleteSupplierMethod(e, parameter_class);
+                    return true;
+                } catch (ParsingException n) {
+                    return false;
+                }
+            })
+            .flatMap((e) -> {
+                param_parse: {
+                    var params = new LinkedHashSet<AutocompletableData.Param>();
+                    for (var param : e.getParameters()) {
+                        boolean success;
+                        if (param.getType() == AutocompleteInteraction.class)
+                            success = params.add(AutocompletableData.Param.INTERACTION);
+                        else if (Reflection.toBoxedType(param.getType()) == Reflection.toBoxedType(parameter_class))
+                            success = params.add(AutocompletableData.Param.VALUE);
+                        else
+                            break param_parse;
 
-            if (supplier_method_with_interaction != null)
-                throw new ParsingException("Ambiguous autocompleter method; both primitive and boxed types were found",
-                    "at class " + supplier_class.getName());
+                        if (!success) break param_parse;
+                    }
 
-            supplier_method_with_interaction = m;
+                    return Stream.of(new AutocompleterMethod(e, params.toArray(AutocompletableData.Param[]::new)));
+                }
+                return Stream.empty();
+            })
+            .collect(Collectors.toSet());
 
-        } catch (NoSuchMethodException e) {
-            logger.debug("autocompleter method with class type and AutocompleteInteraction parameter not found");
-            nsme = e;
-        }
-
-        Method supplier_method_without_interaction = null;
-        try {
-            var primitive_type = Reflection.toPrimitiveType(parameter_class);
-            logger.debug("trying to find autocompleter method with primitive and AutocompleteInteraction parameter");
-            supplier_method_without_interaction = supplier_class.getDeclaredMethod(supplier_method_name, primitive_type);
-        } catch (NoSuchMethodException e) {
-            logger.debug("autocompleter method with primitive and without AutocompleteInteraction parameter not found");
-            nsme = e;
-        }
-        try {
-            var class_type = Reflection.toBoxedType(parameter_class);
-            logger.debug("trying to find autocompleter method with class type and AutocompleteInteraction parameter");
-            var m = supplier_class.getDeclaredMethod(supplier_method_name, class_type);
-
-            if (supplier_method_without_interaction != null)
-                throw new ParsingException("Ambiguous autocompleter method; both primitive and boxed types were found",
-                    "at class " + supplier_class.getName());
-
-            supplier_method_without_interaction = m;
-
-        } catch (NoSuchMethodException e) {
-            logger.debug("autocompleter method with class type and without AutocompleteInteraction parameter not found");
-            nsme = e;
-        }
-        try {
-            logger.debug("trying to find autocompleter method without AutocompleteInteraction parameter");
-            supplier_method_without_interaction = supplier_class.getDeclaredMethod(supplier_method_name, parameter_class);
-        } catch (NoSuchMethodException e) {
-            logger.debug("autocompleter method without AutocompleteInteraction parameter not found");
-            nsme = e;
-        }
-
-        if (supplier_method_with_interaction == null && supplier_method_without_interaction == null) {
-            throw nsme;
-        } else if (supplier_method_with_interaction != null && supplier_method_without_interaction != null) {
-
-            logger.debug("""
-                found both autocompleter methods with and without AutocompleteInteraction parameter:
-                {}
-                and
-                {}
-                attempting to resolve ambiguity
-                """, supplier_method_with_interaction, supplier_method_without_interaction);
-
-            ParsingException pe = null;
-            try {
-                validateAutocompleteSupplierMethod(supplier_method_with_interaction, parameter_class);
-            } catch (ParsingException e) {
-                logger.debug("invalidated autocompleter method with AutocompleteInteraction parameter");
-                supplier_method_with_interaction = null;
-                pe = e;
-            }
-            try {
-                validateAutocompleteSupplierMethod(supplier_method_without_interaction, parameter_class);
-            } catch (ParsingException e) {
-                logger.debug("invalidated autocompleter method without AutocompleteInteraction parameter");
-                supplier_method_without_interaction = null;
-                pe = e;
-            }
-
-            if (pe == null)
-                throw new ParsingException("Ambiguous autocomplete supplier method, ", "at class " + supplier_class.getName());
-
-            if (supplier_method_with_interaction == null && supplier_method_without_interaction == null)
-                throw pe;
-
-        }
-
-        if (supplier_method_with_interaction != null) {
-            return new AutocompleterMethod(supplier_method_with_interaction, true);
+        if (methods.size() == 1) {
+            return methods.stream().findAny().get();
+        } else if (methods.isEmpty()) {
+            throw new ParsingException(
+                String.format("""
+                    no valid Autocompleter method was found with name '%2$s' in class '%1$s'
+                    a valid Autocompleter:
+                      - must be annotated with @Autocompleter
+                      - must have a return type assignable to List<? extends AutocompleteSuggestion<? extends %3$s>>
+                      - must have parameters be of the type AutocompleteInteraction or %3$s with each type appearing at most once
+                    """, supplier_class, supplier_method_name, Reflection.toBoxedType(parameter_class)),
+                ""
+            );
         } else {
-            return  new AutocompleterMethod(supplier_method_without_interaction, false);
+            throw new ParsingException(
+                "multiple valid Autocompleter methods found: " + methods,
+                ""
+            );
         }
     }
+
 
     @SuppressWarnings("DuplicateExpressions")
     private void validateAutocompleteSupplierMethod(Method method, Class<?> required_class) {
