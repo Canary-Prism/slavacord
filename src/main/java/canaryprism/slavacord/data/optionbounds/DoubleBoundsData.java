@@ -11,10 +11,10 @@ public record DoubleBoundsData(double min, double max) implements OptionBoundsDa
 
     @Override
     public void apply(SlashCommandOptionBuilder builder) {
-        if (min != Double.MIN_NORMAL)
+        if (min != Double.NEGATIVE_INFINITY)
             builder.setDecimalMinValue(min);
 
-        if (max != Double.MAX_VALUE)
+        if (max != Double.POSITIVE_INFINITY)
             builder.setDecimalMaxValue(max);
     }
     

@@ -69,6 +69,9 @@ public class CommandHandler {
 
     private static final Logger logger = LogManager.getLogger(CommandHandler.class);
 
+    private static final long BOUNDS_MAX = 1L << 53;
+    private static final long BOUNDS_MIN = -BOUNDS_MAX;
+
     private final DiscordApi api;
 
     private final SlashCommandCreateListener listener;
@@ -1063,11 +1066,16 @@ public class CommandHandler {
                                 throw new ParsingException("DoubleBounds min must be less than or equal to max", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
                             }
 
-                            if (min <= -0x20000000000000L && max >= 0x20000000000000L) {
+                            if ((min == BOUNDS_MIN || min == Double.NEGATIVE_INFINITY)
+                                && (max == BOUNDS_MAX || max == Double.POSITIVE_INFINITY)) {
                                 logger.warn("""
                                         DoubleBounds has no effect
                                             with parameter {}.{}({} {})
                                         """, target::getName, method::getName, parameter_type::toString, parameter::getName);
+                            } else if (min < BOUNDS_MIN) {
+                                throw new ParsingException("DoubleBounds min must not be smaller than -2^53", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                            } else if (max > BOUNDS_MAX) {
+                                throw new ParsingException("DoubleBounds max must not be greater than 2^53", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
                             }
 
                             bounds_data = new DoubleBoundsData(min, max);
@@ -1087,11 +1095,16 @@ public class CommandHandler {
                                 throw new ParsingException("LongBounds min must be less than or equal to max", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
                             }
 
-                            if (min <= -0x20000000000000L && max >= 0x20000000000000L) {
+                            if ((min == BOUNDS_MIN || min == Long.MIN_VALUE)
+                                && (max == BOUNDS_MAX || max == Long.MAX_VALUE)) {
                                 logger.warn("""
                                         LongBounds has no effect
                                             with parameter {}.{}({} {})
                                         """, target::getName, method::getName, parameter_type::toString, parameter::getName);
+                            } else if (min < BOUNDS_MIN) {
+                                throw new ParsingException("LongBounds min must not be smaller than -2^53", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                            } else if (max > BOUNDS_MAX) {
+                                throw new ParsingException("LongBounds max must not be greater than 2^53", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
                             }
 
                             bounds_data = new LongBoundsData(min, max);
