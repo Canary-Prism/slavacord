@@ -1669,7 +1669,7 @@ public class CommandHandler {
                       - must be annotated with @Autocompleter
                       - must have a return type assignable to List<? extends AutocompleteSuggestion<? extends %3$s>>
                       - must have parameters be of the type AutocompleteInteraction or %3$s with each type appearing at most once
-                    """, supplier_class, supplier_method_name, Reflection.toBoxedType(parameter_class)),
+                    """, supplier_class, supplier_method_name, Reflection.toBoxedType(parameter_class).getName()),
                 ""
             );
         } else {
