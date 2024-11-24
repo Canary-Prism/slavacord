@@ -1624,37 +1624,50 @@ public class CommandHandler {
     }
 
     private AutocompleterMethod obtainAutocompleterMethod(Class<?> supplier_class, String supplier_method_name, Class<?> parameter_class) throws NoSuchMethodException {
+        logger.trace("obtaining autocompleter method from class '{}' with name '{}' for option of type '{}'", supplier_class, supplier_method_name, parameter_class);
 
         var methods = Stream.of(supplier_class.getDeclaredMethods())
-            .filter((e) ->
-                e.getName().equals(supplier_method_name)
-                && e.getDeclaredAnnotation(Autocompleter.class) != null
-            )
+            .filter((e) -> e.getName().equals(supplier_method_name))
             .filter((e) -> {
+                logger.trace("filter validating method '{}'", e);
                 try {
                     validateAutocompleteSupplierMethod(e, parameter_class);
+                    logger.trace("filter success");
                     return true;
                 } catch (ParsingException n) {
+                    logger.trace("filter fail");
                     return false;
                 }
             })
             .flatMap((e) -> {
+                logger.trace("parsing method '{}'", e);
                 param_parse: {
                     var params = new LinkedHashSet<AutocompletableData.Param>();
+                    logger.trace("parsing through parameter types");
                     for (var param : e.getParameters()) {
-                        boolean success;
-                        if (param.getType() == AutocompleteInteraction.class)
-                            success = params.add(AutocompletableData.Param.INTERACTION);
-                        else if (Reflection.toBoxedType(param.getType()) == Reflection.toBoxedType(parameter_class))
-                            success = params.add(AutocompletableData.Param.VALUE);
-                        else
-                            break param_parse;
+                        var type = param.getType();
+                        logger.trace("parsing type '{}'", type);
 
-                        if (!success) break param_parse;
+                        boolean success;
+                        if (type == AutocompleteInteraction.class)
+                            success = params.add(AutocompletableData.Param.INTERACTION);
+                        else if (Reflection.toBoxedType(type) == Reflection.toBoxedType(parameter_class))
+                            success = params.add(AutocompletableData.Param.VALUE);
+                        else {
+                            logger.trace("unrecognised type '{}'", type);
+                            break param_parse;
+                        }
+
+                        if (!success) {
+                            logger.trace("parameter type '{}' already encountered", type);
+                            break param_parse;
+                        }
                     }
 
+                    logger.debug("found valid autocompleter method '{}'", e);
                     return Stream.of(new AutocompleterMethod(e, params.toArray(AutocompletableData.Param[]::new)));
                 }
+                logger.trace("method parse fail");
                 return Stream.empty();
             })
             .collect(Collectors.toSet());
@@ -1689,6 +1702,7 @@ public class CommandHandler {
 
 
         if (method.getDeclaredAnnotation(Autocompleter.class) == null) {
+            logger.debug("no @Autocompleter found on method, validation fail");
             throw new ParsingException("Autocomplete supplier method must be annotated with @Autocompleter",
                     "in method " + supplier_class.getName() + "." + method.getName());
         }
