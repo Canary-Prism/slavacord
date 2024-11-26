@@ -1,5 +1,8 @@
 # Changelog
 
+## v3.0.1
+- fixed bug where `@DoubleBounds` and `@LongBounds` that only specified min or max would get erroneous out of range exceptions
+
 ## v3.0.0
 - renamed all enum constants to be SCREAMING_SNAKE_CASE
 - removed `@Target`s of `@OptionChoiceLong` and `@OptionChoiceString`. you are no longer allowed to annotate them on anything (it never actually did anything anyway)
