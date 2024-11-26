@@ -1,5 +1,8 @@
 # Changelog
 
+## v3.0.2
+- fixed bug where nested classes weren't parsed properly and would attempt to reparse the enclosing class instead
+
 ## v3.0.1
 - fixed bug where `@DoubleBounds` and `@LongBounds` that only specified min or max would get erroneous out of range exceptions
 
