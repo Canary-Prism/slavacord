@@ -1072,9 +1072,9 @@ public class CommandHandler {
                                         DoubleBounds has no effect
                                             with parameter {}.{}({} {})
                                         """, target::getName, method::getName, parameter_type::toString, parameter::getName);
-                            } else if (min < BOUNDS_MIN) {
+                            } else if (min != Double.NEGATIVE_INFINITY && min < BOUNDS_MIN) {
                                 throw new ParsingException("DoubleBounds min must not be smaller than -2^53", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            } else if (max > BOUNDS_MAX) {
+                            } else if (max != Double.POSITIVE_INFINITY && max > BOUNDS_MAX) {
                                 throw new ParsingException("DoubleBounds max must not be greater than 2^53", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
                             }
 
@@ -1101,9 +1101,9 @@ public class CommandHandler {
                                         LongBounds has no effect
                                             with parameter {}.{}({} {})
                                         """, target::getName, method::getName, parameter_type::toString, parameter::getName);
-                            } else if (min < BOUNDS_MIN) {
+                            } else if (min != Long.MIN_VALUE && min < BOUNDS_MIN) {
                                 throw new ParsingException("LongBounds min must not be smaller than -2^53", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            } else if (max > BOUNDS_MAX) {
+                            } else if (max != Long.MAX_VALUE && max > BOUNDS_MAX) {
                                 throw new ParsingException("LongBounds max must not be greater than 2^53", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
                             }
 
