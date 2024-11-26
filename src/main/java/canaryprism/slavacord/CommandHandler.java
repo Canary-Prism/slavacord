@@ -1470,9 +1470,9 @@ public class CommandHandler {
                             constructor.setAccessible(true);
                             group_instance = constructor.newInstance();
                         } catch (NoSuchMethodException e) {
-                            throw new ParsingException("CommandGroup class must have a no-args constructor", "at class " + target.getName());
+                            throw new ParsingException("CommandGroup class must have a no-args constructor", "at class " + group.getName());
                         } catch (Exception e) {
-                            throw new ParsingException("Exception while trying to instantiate class", "at class " + target.getName(), e);
+                            throw new ParsingException("Exception while trying to instantiate class", "at class " + group.getName(), e);
                         }
                     } else {
                         logger.trace("nested class is not static (inner class)");
@@ -1481,9 +1481,9 @@ public class CommandHandler {
                             constructor.setAccessible(true);
                             group_instance = constructor.newInstance(instance);
                         } catch (NoSuchMethodException e) {
-                            throw new ParsingException("CommandGroup class must have a no-args constructor", "at class " + target.getName());
+                            throw new ParsingException("CommandGroup class must have a no-args constructor", "at class " + group.getName());
                         } catch (Exception e) {
-                            throw new ParsingException("Exception while trying to instantiate class", "at class " + target.getName(), e);
+                            throw new ParsingException("Exception while trying to instantiate class", "at class " + group.getName(), e);
                         }
                     }
                 }
@@ -1495,7 +1495,7 @@ public class CommandHandler {
 
                 if (depth == 0) {
                     logger.trace("depth is 0, adding command group as a SlashCommand");
-                    var requires_permissions = target.getDeclaredAnnotation(RequiresPermissions.class);
+                    var requires_permissions = group.getDeclaredAnnotation(RequiresPermissions.class);
                     HashSet<PermissionType> permissions = null;
                     if (requires_permissions != null) {
                         logger.trace("found @RequiresPermissions on class");
@@ -1506,7 +1506,7 @@ public class CommandHandler {
                                 logger.warn("""
                                         Duplicate required permissions found {} at class {} !!
                                         ignoring duplicate
-                                        """, e, target.getName());
+                                        """, e, group.getName());
                             }
                         }
                     }
@@ -1514,7 +1514,7 @@ public class CommandHandler {
                         logger.info("""
                             Empty required permissions list at class {}
                             Discord will interpret this as requiring PermissionType.ADMINISTRATOR
-                            """, target.getName());
+                            """, group.getName());
                     }
                     ((ArrayList<SlashCommandData>) target_list).add(new SlashCommandData(
                         name, 
@@ -1531,17 +1531,17 @@ public class CommandHandler {
                     ));
                 } else {
                     logger.trace("depth is not 0, adding command group as a SlashCommandOption with type SUB_COMMAND_GROUP");
-                    if (target.getDeclaredAnnotation(RequiresPermissions.class) != null) {
+                    if (group.getDeclaredAnnotation(RequiresPermissions.class) != null) {
                         logger.trace("found @RequiresPermissions on class");
                         // not allowed here
                         throw new ParsingException(
                                 "@RequiresPermissions is not allowed in nested commands or command groups",
-                                "at class " + target.getName());
+                                "at class " + group.getName());
                     }
                     if (!group_of_commands.enabledInDMs()) {
                         throw new ParsingException(
                                 "enabledInDMs = false is not allowed in nested commands or command groups",
-                                "at class " + target.getName());
+                                "at class " + group.getName());
                     }
                     ((ArrayList<SlashCommandOptionData<?>>) target_list).add(new SlashCommandOptionData<Long>(
                         name, 
