@@ -5,7 +5,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
 /**
- * container annotation for {@link Trans} annotations
+ * container annotation for {@link Trans} annotations. the "Trans" in {@code @Translations} stands for transgender
  */
 @Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
 @Target({ ElementType.METHOD, ElementType.PARAMETER, ElementType.TYPE})
