@@ -239,7 +239,7 @@ public class CommandHandler {
                     try {
                         Object returned = handle.invokeWithArguments(parameters);
                         
-                        if (returns_response != null && returned != null && !((String)returned).isBlank()) {
+                        if (returns_response != null) {
                             processImmediateRespond(interaction, returns_response, method.getGenericReturnType(), returned);
                         }
                     } catch (Throwable e) {
