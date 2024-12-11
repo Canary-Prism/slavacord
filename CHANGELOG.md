@@ -1,5 +1,8 @@
 # Changelog
 
+## v3.0.3
+- fixed bug where all null and blank String returns are still ignored
+
 ## v3.0.2
 - fixed bug where nested classes weren't parsed properly and would attempt to reparse the enclosing class instead
 
