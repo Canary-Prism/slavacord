@@ -108,8 +108,7 @@ it might be desirable to respond with simple messages for most cases but a compl
 
 - if your `@ReturnsResponse` command method has an `Optional<String>` return type you can simply return `Optional.empty()` and the CommandHandler will make no attempt to send a response. note that a `null` return value will throw an IllegalArgumentException as Optionals are by convention never allowed to be `null`.
 
-- if your `@ReturnsResponse` command method has a `String` return type, you *can* return `null` to indicate no response, but this is less clear than returning an empty Optional and so is not recommended. in future versions this might generate a warning to try to guard against accidental `null` returns.  
-**WARNING:** returning a blank string (a string where all its characters are classified as "whitespace" characters) *also* causes CommandHandler to not attempt to respond with the string (originally this was done because Discord does not accept blank strings as message content anyway), however this is legacy behaviour for backwards compatibility and is very much not recommended. doing this ALWAYS generates a warning and ***WON'T BE VALID NEXT MAJOR VERSION***
+- if your `@ReturnsResponse` command method has a `String` return type, you *can* return `null` to indicate no response, but this is less clear than returning an empty Optional and so is not recommended. in future versions this might generate a warning to try to guard against accidental `null` returns.
 
 use one of the above methods to return after responding with the `SlashCommandInteraction` yourself and the handler will simply not send a response  
 
