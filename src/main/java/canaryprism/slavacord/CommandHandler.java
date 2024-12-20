@@ -1563,7 +1563,10 @@ public class CommandHandler {
     private Optional<? extends SlashCommandOptionType> inferType(Type type) {
         var compatible = bridge.getSupportedValues(SlashCommandOptionType.class)
                 .stream()
-                .filter((e) -> e != SlashCommandOptionType.UNKNOWN)
+                .filter((e) ->
+                        e != SlashCommandOptionType.UNKNOWN
+                        && e != SlashCommandOptionType.SUBCOMMAND
+                        && e != SlashCommandOptionType.SUBCOMMAND_GROUP)
                 .filter((e) -> TypeUtils.isAssignable(type, e.getTypeRepresentation())
                         || TypeUtils.isAssignable(type, e.getInternalTypeRepresentation(bridge)))
                 .collect(Collectors.toSet());
@@ -1759,6 +1762,8 @@ public class CommandHandler {
         var set = EnumSet.noneOf(ChannelType.class);
 
         for (var type : bridge.getSupportedValues(ChannelType.class)) {
+            if (type == ChannelType.UNKNOWN)
+                continue;
             logger.trace("checking if base api type {} is assignable to {}", type.getTypeRepresentation(), parameter_type);
             if (TypeUtils.isAssignable(type.getTypeRepresentation(), parameter_type)) {
                 set.add(type);
