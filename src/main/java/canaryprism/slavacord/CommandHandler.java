@@ -427,8 +427,6 @@ public class CommandHandler {
             suggestions = data.filter().filter(suggestions, user_input);
         }
 
-        var type = data.type();
-
         var list = new ArrayList<canaryprism.discordbridge.api.data.interaction.slash.SlashCommandOptionChoiceData>();
 
         for (var suggestion : suggestions) {
@@ -828,7 +826,7 @@ public class CommandHandler {
         @NotNull
         @Contract(value = " -> new", pure = true)
         @Override
-        public Type[] getActualTypeArguments() {
+        public Type @NotNull [] getActualTypeArguments() {
             return new Type[] { String.class };
         }
         @NotNull
