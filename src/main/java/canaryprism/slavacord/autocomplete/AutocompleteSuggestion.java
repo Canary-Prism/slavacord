@@ -1,9 +1,10 @@
 package canaryprism.slavacord.autocomplete;
 
+import canaryprism.discordbridge.api.misc.DiscordLocale;
+
 import java.util.Map;
 import java.util.Objects;
 
-import org.javacord.api.interaction.DiscordLocale;
 
 /**
  * A suggestion for an autocomplete command.

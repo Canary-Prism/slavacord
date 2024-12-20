@@ -1,9 +1,8 @@
 package canaryprism.slavacord.data;
 
-import java.util.Map;
+import canaryprism.discordbridge.api.misc.DiscordLocale;
 
-import org.javacord.api.interaction.DiscordLocale;
-import org.javacord.api.interaction.SlashCommandOptionChoiceBuilder;
+import java.util.Map;
 
 public record SlashCommandOptionChoiceData<T>(
     String name,
@@ -19,21 +18,10 @@ public record SlashCommandOptionChoiceData<T>(
         return "    ".repeat(indent) + "SlashCommandOptionChoiceData [name = " + name + ", value = " + value + "]";
     }
 
-    public SlashCommandOptionChoiceBuilder toSlashCommandOptionChoiceBuilder() {
-        SlashCommandOptionChoiceBuilder builder;
-        if (value instanceof String) {
-            builder = new SlashCommandOptionChoiceBuilder().setValue((String) value);
-        } else if (value instanceof Long) {
-            builder = new SlashCommandOptionChoiceBuilder().setValue((long) value);
-        } else if (value.getClass().isEnum()) {
-            builder = new SlashCommandOptionChoiceBuilder().setValue(((Enum<?>)value).ordinal());
-        } else {
-            throw new IllegalArgumentException("Invalid type for SlashCommandOptionChoiceData.value: " + value.getClass());
-        }
+    public canaryprism.discordbridge.api.data.interaction.slash.SlashCommandOptionChoiceData toSlashCommandOptionChoiceBuilder() {
+        var builder = new canaryprism.discordbridge.api.data.interaction.slash.SlashCommandOptionChoiceData(name, value);
 
-        builder.setName(name);
-
-        localizations.forEach(builder::addNameLocalization);
+        builder.setNameLocalizations(localizations);
 
         return builder;
     }

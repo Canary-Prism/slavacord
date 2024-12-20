@@ -1,22 +1,8 @@
 package canaryprism.slavacord;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-import java.util.List;
-import java.util.Optional;
-
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.core.config.Configurator;
-import org.javacord.api.entity.channel.ChannelType;
-import org.javacord.api.entity.channel.RegularServerChannel;
-import org.javacord.api.interaction.DiscordLocale;
-import org.junit.jupiter.api.Test;
-
-import canaryprism.slavacord.annotations.Command;
-import canaryprism.slavacord.annotations.CreateGlobal;
-import canaryprism.slavacord.annotations.Option;
-import canaryprism.slavacord.annotations.ReturnsResponse;
-import canaryprism.slavacord.annotations.Trans;
+import canaryprism.discordbridge.api.channel.ChannelType;
+import canaryprism.discordbridge.api.misc.DiscordLocale;
+import canaryprism.slavacord.annotations.*;
 import canaryprism.slavacord.annotations.optionbounds.ChannelTypeBounds;
 import canaryprism.slavacord.annotations.optionbounds.DoubleBounds;
 import canaryprism.slavacord.annotations.optionbounds.LongBounds;
@@ -26,6 +12,15 @@ import canaryprism.slavacord.autocomplete.annotations.Autocompleter;
 import canaryprism.slavacord.autocomplete.annotations.Autocompletes;
 import canaryprism.slavacord.exceptions.ParsingException;
 import canaryprism.slavacord.mock.MockDiscordApi;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.core.config.Configurator;
+import org.javacord.api.entity.channel.RegularServerChannel;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit test for simple App.
@@ -149,7 +144,7 @@ public class AppTest {
                 @StringLengthBounds @Option(name = "one") String str,
                 @DoubleBounds @Option(name = "two") double d,
                 @LongBounds @Option(name = "three") long l,
-                @ChannelTypeBounds({ ChannelType.SERVER_TEXT_CHANNEL }) @Option(name = "four") RegularServerChannel channel
+                @ChannelTypeBounds({ ChannelType.SERVER_TEXT }) @Option(name = "four") RegularServerChannel channel
             ) {}
         }
 

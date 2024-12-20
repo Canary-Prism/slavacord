@@ -1,14 +1,12 @@
 package canaryprism.slavacord.data;
 
+import canaryprism.discordbridge.api.interaction.slash.SlashCommandOptionType;
+import canaryprism.slavacord.data.autocomplete.AutocompletableData;
+import canaryprism.slavacord.data.optionbounds.OptionBoundsData;
+
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Objects;
-
-import canaryprism.slavacord.data.autocomplete.AutocompletableData;
-import org.javacord.api.interaction.SlashCommandOptionBuilder;
-import org.javacord.api.interaction.SlashCommandOptionType;
-
-import canaryprism.slavacord.data.optionbounds.OptionBoundsData;
 
 public record SlashCommandOptionData<T>(
     String name,
@@ -77,13 +75,10 @@ public record SlashCommandOptionData<T>(
         }
     }
 
-    public SlashCommandOptionBuilder toSlashCommandOptionBuilder() {
-        SlashCommandOptionBuilder builder = new SlashCommandOptionBuilder();
+    public canaryprism.discordbridge.api.data.interaction.slash.SlashCommandOptionData toSlashCommandOptionBuilder() {
+        var builder = new canaryprism.discordbridge.api.data.interaction.slash.SlashCommandOptionData(name, description, type);
 
-        builder.setName(name);
-        builder.setDescription(description);
         builder.setRequired(required);
-        builder.setType(type);
 
         builder.setAutocompletable(autocompletable_data != null);
 
@@ -91,19 +86,19 @@ public record SlashCommandOptionData<T>(
             bounds.apply(builder);
         }
 
-        localizations.names().forEach(builder::addNameLocalization);
-        localizations.descriptions().forEach(builder::addDescriptionLocalization);
+        builder.setNameLocalizations(localizations.names());
+        builder.setDescriptionLocalizations(localizations.descriptions());
 
         if (options != null && !options.isEmpty()) {
-            for (SlashCommandOptionData<?> option : options) {
-                builder.addOption(option.toSlashCommandOptionBuilder().build());
-            }
+            builder.setOptions(options.stream()
+                    .map(SlashCommandOptionData::toSlashCommandOptionBuilder)
+                    .toList());
         }
 
         if (choices != null && !choices.isEmpty()) {
-            for (SlashCommandOptionChoiceData<T> choice : choices) {
-                builder.addChoice(choice.toSlashCommandOptionChoiceBuilder().build());
-            }
+            builder.setChoices(choices.stream()
+                    .map(SlashCommandOptionChoiceData::toSlashCommandOptionChoiceBuilder)
+                    .toList());
         }
 
         return builder;

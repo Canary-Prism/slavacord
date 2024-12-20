@@ -1,11 +1,11 @@
 package canaryprism.slavacord.annotations;
 
+import canaryprism.discordbridge.api.misc.DiscordLocale;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
-
-import org.javacord.api.interaction.DiscordLocale;
 
 /**
  * Trans(lated) name and description for a Command or Option

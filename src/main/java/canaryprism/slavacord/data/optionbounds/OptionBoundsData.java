@@ -1,7 +1,7 @@
 package canaryprism.slavacord.data.optionbounds;
 
-import org.javacord.api.interaction.SlashCommandOptionBuilder;
+import canaryprism.discordbridge.api.data.interaction.slash.SlashCommandOptionData;
 
 public interface OptionBoundsData {
-    void apply(SlashCommandOptionBuilder builder);
+    void apply(SlashCommandOptionData builder);
 }

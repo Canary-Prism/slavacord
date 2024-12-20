@@ -3,9 +3,11 @@
  * <a href="https://github.com/Canary-Prism/slavacord">Github Repo</a>
  */
 module canaryprism.slavacord {
-    requires transitive org.javacord.api;
+//    requires transitive org.javacord.api;
+    requires canaryprism.discordbridge.api;
     requires org.apache.logging.log4j;
-    requires annotations;
+    requires static org.jetbrains.annotations;
+    requires org.apache.commons.lang3;
 
     exports canaryprism.slavacord;
     exports canaryprism.slavacord.annotations;

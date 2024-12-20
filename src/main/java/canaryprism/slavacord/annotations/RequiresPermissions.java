@@ -1,9 +1,9 @@
 package canaryprism.slavacord.annotations;
 
+import canaryprism.discordbridge.api.server.permission.PermissionType;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
-
-import org.javacord.api.entity.permission.PermissionType;
 
 /**
  * <p>sets the default required permissions of a user to run a command</p>

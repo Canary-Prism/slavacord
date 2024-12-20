@@ -1,9 +1,9 @@
 package canaryprism.slavacord.annotations;
 
+import canaryprism.discordbridge.api.misc.DiscordLocale;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
-
-import org.javacord.api.interaction.DiscordLocale;
 
 /**
  * Trans(lated) name for an OptionChoice

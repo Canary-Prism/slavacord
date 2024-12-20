@@ -3,43 +3,18 @@
  */
 package canaryprism.slavacord;
 
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-import java.lang.annotation.Annotation;
-import java.lang.invoke.MethodHandle;
-import java.lang.reflect.*;
-import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import canaryprism.slavacord.autocomplete.annotations.SearchSuggestions;
-import canaryprism.slavacord.data.autocomplete.AutocompletableData;
-import canaryprism.slavacord.data.autocomplete.filter.AutocompleteFilter;
-import canaryprism.slavacord.data.autocomplete.filter.AutocompleteFilterData;
-import canaryprism.slavacord.util.Reflection;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.javacord.api.DiscordApi;
-import org.javacord.api.entity.channel.ChannelType;
-import org.javacord.api.entity.channel.ServerChannel;
-import org.javacord.api.entity.message.MessageFlag;
-import org.javacord.api.entity.permission.PermissionType;
-import org.javacord.api.event.interaction.AutocompleteCreateEvent;
-import org.javacord.api.event.interaction.SlashCommandCreateEvent;
-import org.javacord.api.interaction.AutocompleteInteraction;
-import org.javacord.api.interaction.DiscordLocale;
-import org.javacord.api.interaction.SlashCommand;
-import org.javacord.api.interaction.SlashCommandInteraction;
-import org.javacord.api.interaction.SlashCommandInteractionOptionsProvider;
-import org.javacord.api.interaction.SlashCommandOption;
-import org.javacord.api.interaction.SlashCommandOptionChoice;
-import org.javacord.api.interaction.SlashCommandOptionType;
-import org.javacord.api.listener.interaction.AutocompleteCreateListener;
-import org.javacord.api.listener.interaction.SlashCommandCreateListener;
-
+import canaryprism.discordbridge.api.DiscordApi;
+import canaryprism.discordbridge.api.DiscordBridge;
+import canaryprism.discordbridge.api.channel.ChannelType;
+import canaryprism.discordbridge.api.channel.ServerChannel;
+import canaryprism.discordbridge.api.event.interaction.SlashCommandAutocompleteEvent;
+import canaryprism.discordbridge.api.event.interaction.SlashCommandInvokeEvent;
+import canaryprism.discordbridge.api.interaction.slash.*;
+import canaryprism.discordbridge.api.listener.interaction.SlashCommandAutocompleteListener;
+import canaryprism.discordbridge.api.listener.interaction.SlashCommandInvokeListener;
+import canaryprism.discordbridge.api.message.MessageFlag;
+import canaryprism.discordbridge.api.misc.DiscordLocale;
+import canaryprism.discordbridge.api.server.permission.PermissionType;
 import canaryprism.slavacord.annotations.*;
 import canaryprism.slavacord.annotations.optionbounds.ChannelTypeBounds;
 import canaryprism.slavacord.annotations.optionbounds.DoubleBounds;
@@ -48,15 +23,30 @@ import canaryprism.slavacord.annotations.optionbounds.StringLengthBounds;
 import canaryprism.slavacord.autocomplete.AutocompleteSuggestion;
 import canaryprism.slavacord.autocomplete.annotations.Autocompleter;
 import canaryprism.slavacord.autocomplete.annotations.Autocompletes;
+import canaryprism.slavacord.autocomplete.annotations.SearchSuggestions;
 import canaryprism.slavacord.data.*;
-import canaryprism.slavacord.data.optionbounds.ChannelTypeBoundsData;
-import canaryprism.slavacord.data.optionbounds.DoubleBoundsData;
-import canaryprism.slavacord.data.optionbounds.LongBoundsData;
-import canaryprism.slavacord.data.optionbounds.OptionBoundsData;
-import canaryprism.slavacord.data.optionbounds.StringLengthBoundsData;
+import canaryprism.slavacord.data.autocomplete.AutocompletableData;
+import canaryprism.slavacord.data.autocomplete.filter.AutocompleteFilter;
+import canaryprism.slavacord.data.autocomplete.filter.AutocompleteFilterData;
+import canaryprism.slavacord.data.optionbounds.*;
 import canaryprism.slavacord.exceptions.ParsingException;
+import canaryprism.slavacord.util.Reflection;
+import org.apache.commons.lang3.reflect.TypeUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+
+import java.lang.annotation.Annotation;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.lang.reflect.*;
+import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * <h2>The main command handler of this library.</h2>
@@ -72,10 +62,11 @@ public class CommandHandler {
     private static final long BOUNDS_MAX = 1L << 53;
     private static final long BOUNDS_MIN = -BOUNDS_MAX;
 
+    private final DiscordBridge bridge;
     private final DiscordApi api;
 
-    private final SlashCommandCreateListener listener;
-    private final AutocompleteCreateListener autocomplete_listener;
+    private final SlashCommandInvokeListener listener;
+    private final SlashCommandAutocompleteListener autocomplete_listener;
 
     private final ArrayList<SlashCommandData> commands = new ArrayList<>();
     
@@ -85,49 +76,49 @@ public class CommandHandler {
      * <p>Creates a new CommandHandler with the given DiscordApi</p>
      * @param api the DiscordApi to use, cannot be null
      */
-    public CommandHandler(DiscordApi api) {
-        this.api = Objects.requireNonNull(api, "DiscordApi cannot be null");
+    public CommandHandler(Object api) {
+        this.api = DiscordBridge.load(Objects.requireNonNull(api, "DiscordApi cannot be null"));
+        this.bridge = this.api.getBridge();
 
         this.listener = this::listener;
 
-        this.api.addSlashCommandCreateListener(listener);
+        this.api.addSlashCommandInvokeListener(listener);
         logger.debug("added SlashCommandCreateListener");
 
         this.autocomplete_listener = this::autocompleteListener;
 
-        this.api.addAutocompleteCreateListener(autocomplete_listener);
+        this.api.addSlashCommandAutocompleteListener(autocomplete_listener);
         logger.debug("added AutocompleteCreateListener");
     }
+    
 
-    private static final Pattern SPACE_PATTERN = Pattern.compile(" ");
-
-    private void listener(SlashCommandCreateEvent e) {
+    private void listener(SlashCommandInvokeEvent e) {
         var interaction = e.getSlashCommandInteraction();
-        var names = SPACE_PATTERN.split(interaction.getFullCommandName());
+        var names = interaction.getFullCommandName().toArray(String[]::new);
 
         synchronized (commands) {
             commands.stream()
                 .filter((command) ->
-                    command.server_id() == interaction.getRegisteredCommandServerId().orElse(0L))
+                    command.server_id() == interaction.getServerCommandServerId().orElse(0L))
                 .forEach((command) -> findMethodAndExecute(names, 0, interaction, interaction, command, null));
         }
         logger.debug("SlashCommandCreateEvent processed: {}", interaction.getFullCommandName());
     }
 
-    private void autocompleteListener(AutocompleteCreateEvent e) {
-        var interaction = e.getAutocompleteInteraction();
-        var names = SPACE_PATTERN.split(interaction.getFullCommandName());
+    private void autocompleteListener(SlashCommandAutocompleteEvent e) {
+        var interaction = e.getSlashCommandAutocompleteInteraction();
+        var names = interaction.getFullCommandName().toArray(String[]::new);
 
         synchronized (commands) {
             commands.stream()
                 .filter((command) ->
-                    command.server_id() == interaction.getRegisteredCommandServerId().orElse(0L))
+                    command.server_id() == interaction.getServerCommandServerId().orElse(0L))
                 .forEach((command) -> findMethodAndAutocomplete(names, 0, interaction, interaction, command, null));
         }
         logger.debug("AutocompleteCreateEvent processed: {}", interaction.getFullCommandName());
     }
 
-    private void findMethodAndExecute(String[] names, int index, SlashCommandInteraction interaction, SlashCommandInteractionOptionsProvider interaction_options, SlashCommandData command, SlashCommandOptionData<?> option) {
+    private void findMethodAndExecute(String[] names, int index, SlashCommandInteraction interaction, SlashCommandInteractionOptionProvider interaction_options, SlashCommandData command, SlashCommandOptionData<?> option) {
 
         String looking_for = names[index];
 
@@ -180,26 +171,16 @@ public class CommandHandler {
                 }
                 if (options != null) {
                     logger.trace("Method has options, parsing options");
-                    for (SlashCommandOptionData<?> slashCommandOptionData : options) {
-                        logger.trace("parsing option: {}", slashCommandOptionData);
-                        var option_type = slashCommandOptionData.type();
-                        boolean is_required = slashCommandOptionData.required();
-                        var option_name = slashCommandOptionData.name();
-                        if (!slashCommandOptionData.stores_enum()) {
-                            var opt_value = switch (option_type) {
-                                case STRING -> interaction_options.getArgumentStringValueByName(option_name);
-                                case LONG -> interaction_options.getArgumentLongValueByName(option_name);
-                                case DECIMAL -> interaction_options.getArgumentDecimalValueByName(option_name);
-                                case BOOLEAN -> interaction_options.getArgumentBooleanValueByName(option_name);
-                                case USER -> interaction_options.getArgumentUserValueByName(option_name);
-                                case CHANNEL -> interaction_options.getArgumentChannelValueByName(option_name);
-                                case ROLE -> interaction_options.getArgumentRoleValueByName(option_name);
-                                case MENTIONABLE -> interaction_options.getArgumentMentionableValueByName(option_name);
-                                case ATTACHMENT -> interaction_options.getArgumentAttachmentValueByName(option_name);
-                                case SUB_COMMAND, SUB_COMMAND_GROUP ->
-                                        throw new IllegalArgumentException("Unexpected SUB_COMMAND/SUB_COMMAND_GROUP in option parser");
-                                case UNKNOWN -> throw new IllegalArgumentException("Unknown Option Type");
-                            };
+                    for (SlashCommandOptionData<?> slash_command_option_data : options) {
+                        logger.trace("parsing option: {}", slash_command_option_data);
+                        var option_type = slash_command_option_data.type();
+                        boolean is_required = slash_command_option_data.required();
+                        var option_name = slash_command_option_data.name();
+                        if (!slash_command_option_data.stores_enum()) {
+                            var opt_value = interaction_options.getArgumentByName(option_name)
+                                    .orElseThrow()
+                                    .getValue();
+
                             if (is_required)
                                 //noinspection OptionalGetWithoutIsPresent
                                 parameters.add(opt_value.get());
@@ -207,21 +188,31 @@ public class CommandHandler {
                                 parameters.add(opt_value);
                         } else {
                             logger.trace("option stores enum, reconstructing enum value");
-                            if (option_type != SlashCommandOptionType.LONG) {
+                            if (option_type != SlashCommandOptionType.INTEGER) {
                                 throw new IllegalArgumentException("Invalid option type for enum");
                             }
                             if (is_required) {
-                                parameters.add(slashCommandOptionData.choices().get(
-                                                interaction_options.getArgumentLongValueByName(
-                                                        slashCommandOptionData.name()
-                                                ).get().intValue()
+                                parameters.add(slash_command_option_data.choices().get(
+                                                interaction_options.getArgumentByName(
+                                                        slash_command_option_data.name())
+                                                    .orElseThrow()
+                                                    .getValue(Long.class)
+                                                    .orElseThrow()
+                                                    .intValue()
                                         ).value()
                                 );
                             } else {
-                                if (interaction_options.getArgumentLongValueByName(slashCommandOptionData.name()).isPresent())
+                                if (interaction_options.getArgumentByName(slash_command_option_data.name())
+                                    .map((e) -> e.getValue(Long.class))
+                                    .isPresent())
                                     parameters.add(Optional.of(
-                                            slashCommandOptionData.choices().get(
-                                                    interaction_options.getArgumentLongValueByName(slashCommandOptionData.name()).get().intValue()
+                                            slash_command_option_data.choices().get(
+                                                    interaction_options.getArgumentByName(
+                                                            slash_command_option_data.name())
+                                                        .orElseThrow()
+                                                        .getValue(Long.class)
+                                                        .orElseThrow()
+                                                        .intValue()
                                             ).value()
                                     ));
                                 else
@@ -263,7 +254,7 @@ public class CommandHandler {
                                             responder.setFlags(MessageFlag.EPHEMERAL);
                                         }
                                         if (returns_response.silent()) {
-                                            responder.setFlags(MessageFlag.SUPPRESS_NOTIFICATIONS);
+                                            responder.setFlags(MessageFlag.SILENT);
                                         }
 
                                         if (returns_response.splitOnLimit()) {
@@ -271,13 +262,13 @@ public class CommandHandler {
                                             responder.setContent(split[0]);
                                             responder.update().join();
 
-                                            var followup = interaction.createFollowupMessageBuilder();
+                                            var followup = interaction.createFollowupResponder();
 
                                             if (returns_response.ephemeral()) {
                                                 followup.setFlags(MessageFlag.EPHEMERAL);
                                             }
                                             if (returns_response.silent()) {
-                                                followup.setFlags(MessageFlag.SUPPRESS_NOTIFICATIONS);
+                                                followup.setFlags(MessageFlag.SILENT);
                                             }
 
                                             for (int i = 1; i < split.length; i++) {
@@ -325,13 +316,13 @@ public class CommandHandler {
 
     }
 
-    private void findMethodAndAutocomplete(String[] names, int index, AutocompleteInteraction interaction, SlashCommandInteractionOptionsProvider interaction_options, SlashCommandData command, SlashCommandOptionData<?> option) {
+    private void findMethodAndAutocomplete(String[] names, int index, SlashCommandAutocompleteInteraction interaction, SlashCommandInteractionOptionProvider interaction_options, SlashCommandData command, SlashCommandOptionData<?> option) {
 
         String looking_for = names[index];
 
         logger.trace("looking for command segment for autocomplete: {}", looking_for);
 
-        var focused_option = interaction.getFocusedOption();
+        var focused_option = interaction.getTargetOption();
 
         String name;
         List<? extends SlashCommandOptionData<?>> options;
@@ -374,10 +365,7 @@ public class CommandHandler {
                             parameters.add(Objects.requireNonNull(instance, "Instance not found for non-static method"));
                         }
 
-                        var opt_value = switch (autocompletable_data.type()) {
-                            case STRING -> interaction_options.getArgumentStringValueByName(focused_option.getName());
-                            case LONG -> interaction_options.getArgumentLongValueByName(focused_option.getName());
-                        };
+                        var opt_value = focused_option.getValue();
 
                         var user_input = opt_value.orElseThrow();
 
@@ -431,7 +419,7 @@ public class CommandHandler {
     }
 
     @SuppressWarnings("unchecked")
-    private void handleAutocompleteResult(Object returned, AutocompletableData data, AutocompleteInteraction interaction, Object user_input) {
+    private void handleAutocompleteResult(Object returned, AutocompletableData data, SlashCommandAutocompleteInteraction interaction, Object user_input) {
         logger.debug("handling autocomplete result: {}", returned);
         var suggestions = (List<? extends AutocompleteSuggestion<?>>) returned;
 
@@ -441,21 +429,13 @@ public class CommandHandler {
 
         var type = data.type();
 
-        var list = new ArrayList<SlashCommandOptionChoice>();
-        switch (type) {
-            case STRING -> {
-                for (var suggestion : suggestions) {
-                    list.add(SlashCommandOptionChoice.create(suggestion.name(), suggestion.value().toString()));
-                }
-            }
-            case LONG -> {
-                for (var suggestion : suggestions) {
-                    list.add(SlashCommandOptionChoice.create(suggestion.name(), (long)suggestion.value()));
-                }
-            }
+        var list = new ArrayList<canaryprism.discordbridge.api.data.interaction.slash.SlashCommandOptionChoiceData>();
+
+        for (var suggestion : suggestions) {
+            list.add(new canaryprism.discordbridge.api.data.interaction.slash.SlashCommandOptionChoiceData(suggestion.name(), suggestion.value()));
         }
 
-        interaction.respondWithChoices(list)
+        interaction.suggest(list)
             .exceptionally(t -> {
                 logger.error("Exception when submitting autocomplete response: ", t);
                 return null;
@@ -596,7 +576,7 @@ public class CommandHandler {
         }
         if (returns_response.silent()) {
             logger.trace("setting response to silent");
-            responder.setFlags(MessageFlag.SUPPRESS_NOTIFICATIONS);
+            responder.setFlags(MessageFlag.SILENT);
         }
         if (returns_response.splitOnLimit()) {
             logger.trace("splitting response on character limit");
@@ -604,13 +584,13 @@ public class CommandHandler {
             responder.setContent(split[0]);
             responder.respond().join();
 
-            var followup = interaction.createFollowupMessageBuilder();
+            var followup = interaction.createFollowupResponder();
 
             if (returns_response.ephemeral()) {
                 followup.setFlags(MessageFlag.EPHEMERAL);
             }
             if (returns_response.silent()) {
-                followup.setFlags(MessageFlag.SUPPRESS_NOTIFICATIONS);
+                followup.setFlags(MessageFlag.SILENT);
             }
 
             for (int i = 1; i < split.length; i++) {
@@ -753,18 +733,22 @@ public class CommandHandler {
                 }
             }
             to_add.addAll(new_commands);
-            api.bulkOverwriteGlobalApplicationCommands(to_add.stream().map(SlashCommandData::toSlashCommandBuilder).collect(Collectors.toSet())).join();
+            api.bulkUpdateGlobalCommands(to_add.stream().map(SlashCommandData::toSlashCommandBuilder).collect(Collectors.toSet())).join();
             logger.trace("bulkOverwriteGlobalApplicationCommands finished");
             processed_commands.addAll(new_commands);
         } else {
+            var server = api.getServerById(server_id)
+                    .orElseThrow(() -> new ParsingException(
+                            "couldn't find server with ID " + server_id, "at class " + target.getName()));
             if (!overwrites) {
                 logger.debug("getting existing server commands from discord");
                 to_add.addAll(
-                    api.getServerSlashCommands(
-                        api.getServerById(server_id)
-                        .orElseThrow(() -> new ParsingException(
-                            "couldn't find server with ID " + server_id, "at class " + target.getName()))
-                    ).join().stream().map(this::parseFromSlashCommand).toList());
+                        server.getServerSlashCommands()
+                                .join()
+                                .stream()
+                                .map(this::parseFromSlashCommand)
+                                .toList()
+                );
 
                 var new_command_names = new_commands.stream().map(SlashCommandData::name).collect(Collectors.toSet());
 
@@ -780,7 +764,10 @@ public class CommandHandler {
 
             }
             to_add.addAll(new_commands);
-            api.bulkOverwriteServerApplicationCommands(server_id, to_add.stream().map(SlashCommandData::toSlashCommandBuilder).collect(Collectors.toSet())).join();
+            server.bulkUpdateServerCommands(to_add.stream()
+                            .map(SlashCommandData::toSlashCommandBuilder)
+                            .collect(Collectors.toSet()))
+                    .join();
             logger.trace("bulkOverwriteServerApplicationCommands finished");
             processed_commands.addAll(new_commands);
         }
@@ -935,8 +922,16 @@ public class CommandHandler {
                         logger.trace("found @Interaction on first parameter");
                         skip_next_interaction_parameter = true;
                         requires_interaction = true;
-                        if (method.getParameters()[0].getType() != org.javacord.api.interaction.SlashCommandInteraction.class)
-                            throw new ParsingException("@Interaction can only be applied to the first parameter with type org.javacord.api.interaction.SlashCommandInteraction", "with parameter " + target.getName() + "." + method.getName() + "(" + method.getParameters()[0].getType().getSimpleName() + " " + method.getParameters()[0].getName() + ")");
+                        if (method.getParameters()[0].getType() != SlashCommandInteraction.class
+                                && !bridge.getImplementationType(SlashCommandInteraction.class)
+                                        .map(method.getParameters()[0].getType()::equals)
+                                        .orElse(false))
+                            throw new ParsingException(String.format(
+                                    "@Interaction can only be applied to the first parameter with type canaryprism.discordbridge.api.interaction.slash.SlashCommandInteraction or %s",
+                                    bridge.getImplementationType(SlashCommandInteraction.class)
+                                            .map(Class::getName)
+                                            .orElse("<not found>")),
+                                    "with parameter " + target.getName() + "." + method.getName() + "(" + method.getParameters()[0].getType().getSimpleName() + " " + method.getParameters()[0].getName() + ")");
                     }
                 } catch (ArrayIndexOutOfBoundsException e) {
                     logger.trace("no parameters found for method");
@@ -953,7 +948,12 @@ public class CommandHandler {
                                 skip_next_interaction_parameter = false;
                                 continue;
                             }
-                            throw new ParsingException("@Interaction can only be applied to the first parameter with type org.javacord.api.interaction.SlashCommandInteraction", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                            throw new ParsingException(String.format(
+                                    "@Interaction can only be applied to the first parameter with type canaryprism.discordbridge.api.interaction.slash.SlashCommandInteraction or %s",
+                                    bridge.getImplementationType(SlashCommandInteraction.class)
+                                            .map(Class::getName)
+                                            .orElse("<not found>")),
+                                    "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
 
                         }
 
@@ -979,23 +979,17 @@ public class CommandHandler {
 
                         var is_enum = actual_type instanceof Class<?> c && c.isEnum();
 
-                        var option_type = switch (
-                            (is_enum) ? "enum" : actual_type.getTypeName()
-                        ) {
-                            case "java.lang.String" -> SlashCommandOptionType.STRING;
-                            case "long", "java.lang.Long" -> SlashCommandOptionType.LONG;
-                            case "double", "java.lang.Double" -> SlashCommandOptionType.DECIMAL;
-                            case "boolean", "java.lang.Boolean" -> SlashCommandOptionType.BOOLEAN;
-                            case "org.javacord.api.entity.user.User" -> SlashCommandOptionType.USER;
-                            case "org.javacord.api.entity.channel.ServerChannel" -> SlashCommandOptionType.CHANNEL;
-                            case "org.javacord.api.entity.Role" -> SlashCommandOptionType.ROLE;
-                            case "org.javacord.api.entity.Mentionable" -> SlashCommandOptionType.MENTIONABLE;
-                            case "org.javacord.api.entity.Attachment" -> SlashCommandOptionType.ATTACHMENT;
-
-                            case "enum" -> SlashCommandOptionType.LONG;
-
-                            default -> throw new ParsingException("Invalid parameter type '" + actual_type.getTypeName() + "', only types supported by Discord can be used", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                        };
+                        SlashCommandOptionType option_type;
+                        if (is_enum) {
+                            option_type = SlashCommandOptionType.INTEGER;
+                        } else {
+                            var final_actual_type = actual_type;
+                            option_type = inferType(actual_type)
+                                    .orElseThrow(() ->
+                                            new ParsingException(
+                                                    "Invalid parameter type '" + final_actual_type.getTypeName() + "', only types supported by the Discord Bridge api or " + bridge + " can be used",
+                                                    "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")"));
+                        }
 
                         var option_name = option.name();
                         var option_description = option.description();
@@ -1014,9 +1008,9 @@ public class CommandHandler {
 
                         OptionBoundsData bounds_data = null;
 
-                        Set<ChannelType> inferred_channel_bounds = null;
+                        EnumSet<ChannelType> inferred_channel_bounds = null;
                         if (option_type == SlashCommandOptionType.CHANNEL) {
-                            inferred_channel_bounds = inferChannelTypeBounds(((Class<?>)actual_type));
+                            inferred_channel_bounds = inferChannelTypeBounds(actual_type);
                             logger.trace("inferred channel type bounds for parameter type {}: {}", actual_type, inferred_channel_bounds);
 
                             bounds_data = new ChannelTypeBoundsData(inferred_channel_bounds);
@@ -1030,7 +1024,7 @@ public class CommandHandler {
                             }
 
                             var channel_types_arr = channel_type_bounds.value();
-                            var channel_types = new HashSet<ChannelType>();
+                            var channel_types = EnumSet.noneOf(ChannelType.class);
                             for (var type : channel_types_arr) {
                                 var success = channel_types.add(type);
                                 if (!success) {
@@ -1055,7 +1049,7 @@ public class CommandHandler {
                         var double_bounds = parameter.getDeclaredAnnotation(DoubleBounds.class);
                         if (double_bounds != null) {
                             logger.trace("found @DoubleBounds on parameter");
-                            if (option_type != SlashCommandOptionType.DECIMAL) {
+                            if (option_type != SlashCommandOptionType.NUMBER) {
                                 throw new ParsingException("@DoubleBounds can only be applied to double parameters", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
                             }
 
@@ -1084,7 +1078,7 @@ public class CommandHandler {
                         var long_bounds = parameter.getDeclaredAnnotation(LongBounds.class);
                         if (long_bounds != null) {
                             logger.trace("found @LongBounds on parameter");
-                            if (option_type != SlashCommandOptionType.LONG) {
+                            if (option_type != SlashCommandOptionType.INTEGER) {
                                 throw new ParsingException("@LongBounds can only be applied to long parameters", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
                             }
 
@@ -1165,11 +1159,12 @@ public class CommandHandler {
 
                                     validateAutocompleteSupplierMethod(supplier_method, actual_class);
 
-                                    var type = switch (actual_class.getName()) {
-                                        case "java.lang.String" -> AutocompletableData.Type.STRING;
-                                        case "long", "java.lang.Long" -> AutocompletableData.Type.LONG;
-                                        default -> throw new ParsingException("Invalid parameter type, only types supported by Discord can be used", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                                    };
+                                    var final_actual_type = actual_type;
+                                    var type = inferType(actual_class)
+                                            .filter((e) -> e.can_be_choices)
+                                            .orElseThrow(() -> new ParsingException(
+                                                    "Invalid parameter type '" + final_actual_type.getTypeName() + "', only autocompletable types supported by the Discord Bridge api or " + bridge + " can be used",
+                                                    "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")"));
 
                                     AutocompleteFilter filter = null;
 
@@ -1235,7 +1230,7 @@ public class CommandHandler {
                         } else if (option_string_choices.length > 0) {
                             logger.trace("found string choices on parameter");
                             var optionchoices = new ArrayList<SlashCommandOptionChoiceData<String>>();
-                            if (option_type != org.javacord.api.interaction.SlashCommandOptionType.STRING) {
+                            if (option_type != SlashCommandOptionType.STRING) {
                                 throw new ParsingException("Option Choices type does not match parameter", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
                             }
                             if (bounds_data != null) {
@@ -1267,7 +1262,7 @@ public class CommandHandler {
                         } else if (option_long_choices.length > 0) {
                             logger.trace("found long choices on parameter");
                             var optionchoices = new ArrayList<SlashCommandOptionChoiceData<Long>>();
-                            if (option_type != org.javacord.api.interaction.SlashCommandOptionType.LONG) {
+                            if (option_type != SlashCommandOptionType.INTEGER) {
                                 throw new ParsingException("Invalid option choice type at parameter " + parameter.getName() + " in method " + method.getName(), "at class " + target.getName());
                             }
                             if (bounds_data != null) {
@@ -1300,7 +1295,7 @@ public class CommandHandler {
                             logger.trace("parameter type is enum");
                             var inner_class = (Class<?>)actual_type;
                             var optionchoices = new ArrayList<SlashCommandOptionChoiceData<Enum<?>>>();
-                            if (option_type != org.javacord.api.interaction.SlashCommandOptionType.LONG) {
+                            if (option_type != SlashCommandOptionType.INTEGER) {
                                 throw new ParsingException("Invalid option choice type at parameter " + parameter.getName() + " in method " + method.getName(), "at class " + target.getName());
                             }
                             if (long_bounds != null) {
@@ -1425,7 +1420,7 @@ public class CommandHandler {
                         description, 
                         localizations,
                         false,
-                        org.javacord.api.interaction.SlashCommandOptionType.SUB_COMMAND, 
+                        SlashCommandOptionType.SUBCOMMAND,
                         options, 
                         null, 
                         null,
@@ -1548,7 +1543,7 @@ public class CommandHandler {
                         description, 
                         localizations,
                         false,
-                        org.javacord.api.interaction.SlashCommandOptionType.SUB_COMMAND_GROUP, 
+                        SlashCommandOptionType.SUBCOMMAND_GROUP,
                         options, 
                         null,
                         null,
@@ -1563,6 +1558,22 @@ public class CommandHandler {
         } catch (ParsingException e) {
             throw e.addParseTrace("at class " + target.getName());
         }
+    }
+
+    private Optional<? extends SlashCommandOptionType> inferType(Type type) {
+        var compatible = bridge.getSupportedValues(SlashCommandOptionType.class)
+                .stream()
+                .filter((e) -> e != SlashCommandOptionType.UNKNOWN)
+                .filter((e) -> TypeUtils.isAssignable(type, e.getTypeRepresentation())
+                        || TypeUtils.isAssignable(type, e.getInternalTypeRepresentation(bridge)))
+                .collect(Collectors.toSet());
+
+        return compatible.stream()
+                .max(Comparator.comparing((option_type) ->
+                        compatible.stream()
+                                .filter((e) -> e.getTypeRepresentation()
+                                        .isAssignableFrom(option_type.getTypeRepresentation()))
+                                .count()));
     }
 
     private LocalizationData parseLocalizationData(Trans[] translations, String parse_trace) {
@@ -1649,7 +1660,7 @@ public class CommandHandler {
                         logger.trace("parsing type '{}'", type);
 
                         boolean success;
-                        if (type == AutocompleteInteraction.class)
+                        if (type == SlashCommandAutocompleteInteraction.class)
                             success = params.add(AutocompletableData.Param.INTERACTION);
                         else if (Reflection.toBoxedType(type) == Reflection.toBoxedType(parameter_class))
                             success = params.add(AutocompletableData.Param.VALUE);
@@ -1742,14 +1753,18 @@ public class CommandHandler {
             "in method " + supplier_class.getName() + "." + method.getName());
     }
 
-    private Set<ChannelType> inferChannelTypeBounds(Class<?> parameter_type) {
+    private EnumSet<ChannelType> inferChannelTypeBounds(Type parameter_type) {
         logger.debug("inferring channel type bounds for parameter type {}", parameter_type);
 
-        var set = new HashSet<ChannelType>();
+        var set = EnumSet.noneOf(ChannelType.class);
 
-        for (var type : ChannelType.values()) {
-            logger.trace("checking if {} is assignable to {}", ChannelTypeBoundsData.getChannelClass(type), parameter_type);
-            if (parameter_type.isAssignableFrom(ChannelTypeBoundsData.getChannelClass(type))) {
+        for (var type : bridge.getSupportedValues(ChannelType.class)) {
+            logger.trace("checking if base api type {} is assignable to {}", type.getTypeRepresentation(), parameter_type);
+            if (TypeUtils.isAssignable(type.getTypeRepresentation(), parameter_type)) {
+                set.add(type);
+            }
+            logger.trace("checking if bridge specific type {} is assignable to {}", type.getInternalTypeRepresentation(bridge), parameter_type);
+            if (TypeUtils.isAssignable(type.getInternalTypeRepresentation(bridge), parameter_type)) {
                 set.add(type);
             }
         }
@@ -1765,8 +1780,8 @@ public class CommandHandler {
         var name = command.getName();
         var description = command.getDescription();
         var localizations = new LocalizationData(command.getNameLocalizations(), command.getDescriptionLocalizations());
-        var enabled_in_DMs = command.isEnabledInDms();
-        var nsfw = command.isNsfw();
+        var enabled_in_DMs = command.isEnabledInDMs();
+        var nsfw = command.isNSFW();
 
         var options = command.getOptions().stream().map(this::parseFromSlashCommandOption).toList();
 
@@ -1785,18 +1800,18 @@ public class CommandHandler {
         var choices = option.getChoices().stream().map(this::parseFromSlashCommandOptionChoice).toList();
 
         var bounds = switch (type) {
-            case CHANNEL -> new ChannelTypeBoundsData(option.getChannelTypes());
-            case DECIMAL -> new DoubleBoundsData(
-                option.getDecimalMinValue().orElse(Double.MIN_NORMAL),
-                option.getDecimalMaxValue().orElse(Double.MAX_VALUE)
+            case CHANNEL -> new ChannelTypeBoundsData(option.getChannelTypeBounds());
+            case NUMBER -> new DoubleBoundsData(
+                option.getNumberBoundsMin().orElse(Double.NEGATIVE_INFINITY),
+                option.getNumberBoundsMax().orElse(Double.POSITIVE_INFINITY)
             );
-            case LONG -> new LongBoundsData(
-                option.getLongMinValue().orElse(Long.MIN_VALUE),
-                option.getLongMaxValue().orElse(Long.MAX_VALUE)
+            case INTEGER -> new LongBoundsData(
+                option.getIntegerBoundsMin().orElse(Long.MIN_VALUE),
+                option.getIntegerBoundsMax().orElse(Long.MAX_VALUE)
             );
             case STRING -> new StringLengthBoundsData(
-                option.getMinLength().orElse(0L),
-                option.getMaxLength().orElse(Long.MAX_VALUE)
+                option.getStringLengthBoundsMin().orElse(0L),
+                option.getStringLengthBoundsMax().orElse(Long.MAX_VALUE)
             );
             default -> null;
         };
@@ -1807,10 +1822,10 @@ public class CommandHandler {
         logger.trace("parsing SlashCommandOptionChoice {}", choice);
 
         var name = choice.getName();
-        if (choice.getLongValue().isPresent()) {
-            return new SlashCommandOptionChoiceData<Long>(name, choice.getLongValue().get(), choice.getNameLocalizations());
-        } else if (choice.getStringValue().isPresent()) {
-            return new SlashCommandOptionChoiceData<String>(name, choice.getStringValue().get(), choice.getNameLocalizations());
+        if (choice.getValue(Long.class).isPresent()) {
+            return new SlashCommandOptionChoiceData<Long>(name, choice.getValue(Long.class).get(), choice.getNameLocalizations());
+        } else if (choice.getValue(String.class).isPresent()) {
+            return new SlashCommandOptionChoiceData<String>(name, choice.getValue(String.class).get(), choice.getNameLocalizations());
         } else {
             throw new IllegalArgumentException("SlashCommandOptionChoice from server has neither a long value nor a string value");
         }

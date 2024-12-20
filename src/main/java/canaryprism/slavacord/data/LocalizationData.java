@@ -1,8 +1,8 @@
 package canaryprism.slavacord.data;
 
-import java.util.Map;
+import canaryprism.discordbridge.api.misc.DiscordLocale;
 
-import org.javacord.api.interaction.DiscordLocale;
+import java.util.Map;
 
 /**
  * combined name and description localizations for use by commands and options

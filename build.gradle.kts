@@ -10,17 +10,24 @@ version = "3.0.3"
 description = "slavacord"
 
 repositories {
-    mavenLocal()
     mavenCentral()
 }
 
 dependencies {
     testImplementation(libs.junit.jupiter.api)
     testImplementation(libs.junit.jupiter.params)
+    testImplementation(platform("org.junit:junit-bom:5.10.0"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation(libs.log4j.core)
+    testImplementation(libs.javacord)
 
-    compileOnly(libs.javacord)
-    compileOnly(libs.log4j.api)
+    compileOnly(libs.jetbrains.annotations)
+
+    implementation(libs.discord.bridge)
+
+    implementation(libs.apache.commons.lang)
+
+    implementation(libs.log4j.api)
 }
 
 java {

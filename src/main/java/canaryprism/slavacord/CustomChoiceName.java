@@ -1,8 +1,8 @@
 package canaryprism.slavacord;
 
-import java.util.Map;
+import canaryprism.discordbridge.api.misc.DiscordLocale;
 
-import org.javacord.api.interaction.DiscordLocale;
+import java.util.Map;
 
 /**
  * <p>

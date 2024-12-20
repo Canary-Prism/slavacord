@@ -1,6 +1,6 @@
 package canaryprism.slavacord.data.optionbounds;
 
-import org.javacord.api.interaction.SlashCommandOptionBuilder;
+import canaryprism.discordbridge.api.data.interaction.slash.SlashCommandOptionData;
 
 public record StringLengthBoundsData(long min, long max) implements OptionBoundsData {
 
@@ -13,10 +13,10 @@ public record StringLengthBoundsData(long min, long max) implements OptionBounds
     }
 
     @Override
-    public void apply(SlashCommandOptionBuilder builder) {
-        builder.setMinLength(min);
+    public void apply(SlashCommandOptionData builder) {
+        builder.setStringLengthBoundsMin(min);
 
         if (max != Long.MAX_VALUE)
-            builder.setMaxLength(max);
+            builder.setStringLengthBoundsMax(max);
     }
 }

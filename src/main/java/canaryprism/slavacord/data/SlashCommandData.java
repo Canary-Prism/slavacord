@@ -1,12 +1,11 @@
 package canaryprism.slavacord.data;
 
+import canaryprism.discordbridge.api.server.permission.PermissionType;
+
 import java.lang.reflect.Method;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
-
-import org.javacord.api.entity.permission.PermissionType;
-import org.javacord.api.interaction.SlashCommandBuilder;
+import java.util.Set;
 
 public record SlashCommandData(
     String name,
@@ -14,7 +13,7 @@ public record SlashCommandData(
     LocalizationData localizations,
     boolean enabled_in_DMs,
     boolean nsfw,
-    EnumSet<PermissionType> required_permissions,
+    Set<? extends PermissionType> required_permissions,
     /**
      * The server ID to register the command in. (0 for global)
      */
@@ -66,26 +65,23 @@ public record SlashCommandData(
         }
     }
 
-    public SlashCommandBuilder toSlashCommandBuilder() {
-        SlashCommandBuilder builder = new SlashCommandBuilder();
+    public canaryprism.discordbridge.api.data.interaction.slash.SlashCommandData toSlashCommandBuilder() {
+        var builder = new canaryprism.discordbridge.api.data.interaction.slash.SlashCommandData(name, description);
 
-        builder.setName(name);
-        builder.setDescription(description);
+        builder.setEnabledInDMs(enabled_in_DMs);
+        builder.setNSFW(nsfw);
 
-        builder.setEnabledInDms(enabled_in_DMs);
-        builder.setNsfw(nsfw);
-
-        localizations.names().forEach(builder::addNameLocalization);
-        localizations.descriptions().forEach(builder::addDescriptionLocalization);
+        builder.setNameLocalizations(localizations.names());
+        builder.setDescriptionLocalizations(localizations.descriptions());
 
         if (required_permissions != null) {
-            builder.setDefaultEnabledForPermissions(required_permissions);
+            builder.setRequiredPermissions(required_permissions);
         }
 
-        if (options != null && !options.isEmpty()) {
-            for (SlashCommandOptionData<?> option : options) {
-                builder.addOption(option.toSlashCommandOptionBuilder().build());
-            }
+        if (options != null) {
+            builder.setOptions(options.stream()
+                    .map(SlashCommandOptionData::toSlashCommandOptionBuilder)
+                    .toList());
         }
 
         return builder;
