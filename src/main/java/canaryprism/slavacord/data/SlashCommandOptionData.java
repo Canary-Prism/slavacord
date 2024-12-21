@@ -14,12 +14,14 @@ public record SlashCommandOptionData<T>(
     LocalizationData localizations,
     boolean required,
     SlashCommandOptionType type,
+    boolean uses_implementation_type,
     List<SlashCommandOptionData<?>> options,
     List<SlashCommandOptionChoiceData<T>> choices,
     AutocompletableData autocompletable_data,
     Method method,
     Object instance,
     boolean requires_interaction,
+    boolean interaction_uses_implementation_type,
     boolean stores_enum,
     OptionBoundsData bounds
 ) implements Data {

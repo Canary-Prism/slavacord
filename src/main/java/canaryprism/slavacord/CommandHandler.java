@@ -5,6 +5,7 @@ package canaryprism.slavacord;
 
 import canaryprism.discordbridge.api.DiscordApi;
 import canaryprism.discordbridge.api.DiscordBridge;
+import canaryprism.discordbridge.api.DiscordBridgeApi;
 import canaryprism.discordbridge.api.channel.ChannelType;
 import canaryprism.discordbridge.api.channel.ServerChannel;
 import canaryprism.discordbridge.api.event.interaction.SlashCommandAutocompleteEvent;
@@ -118,6 +119,16 @@ public class CommandHandler {
         logger.debug("AutocompleteCreateEvent processed: {}", interaction.getFullCommandName());
     }
 
+    private static final MethodHandle get_implementation_handle;
+
+    static {
+        try {
+            get_implementation_handle = MethodHandles.lookup().findVirtual(DiscordBridgeApi.class, "getImplementation", MethodType.methodType(Object.class));
+        } catch (NoSuchMethodException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private void findMethodAndExecute(String[] names, int index, SlashCommandInteraction interaction, SlashCommandInteractionOptionProvider interaction_options, SlashCommandData command, SlashCommandOptionData<?> option) {
 
         String looking_for = names[index];
@@ -129,18 +140,21 @@ public class CommandHandler {
         String name;
         List<? extends SlashCommandOptionData<?>> options;
         boolean requires_interaction;
+        boolean interaction_uses_implementation_type;
         if (command == null) {
             method = option.method();
             instance = option.instance();
             name = option.name();
             options = option.options();
             requires_interaction = option.requires_interaction();
+            interaction_uses_implementation_type = option.interaction_uses_implementation_type();
         } else {
             method = command.method();
             instance = command.instance();
             name = command.name();
             options = command.options();
             requires_interaction = command.requires_interaction();
+            interaction_uses_implementation_type = command.interaction_uses_implementation_type();
         }
 
         if (name.equals(looking_for)) {
@@ -167,19 +181,34 @@ public class CommandHandler {
                 }
                 if (requires_interaction) {
                     logger.trace("Method requires interaction, adding interaction to parameters");
-                    parameters.add(interaction);
+                    if (interaction_uses_implementation_type)
+                        parameters.add(interaction.getImplementation());
+                    else
+                        parameters.add(interaction);
                 }
                 if (options != null) {
                     logger.trace("Method has options, parsing options");
                     for (SlashCommandOptionData<?> slash_command_option_data : options) {
                         logger.trace("parsing option: {}", slash_command_option_data);
                         var option_type = slash_command_option_data.type();
+                        var uses_implementation_type = slash_command_option_data.uses_implementation_type();
                         boolean is_required = slash_command_option_data.required();
                         var option_name = slash_command_option_data.name();
                         if (!slash_command_option_data.stores_enum()) {
                             var opt_value = interaction_options.getArgumentByName(option_name)
                                     .orElseThrow()
                                     .getValue();
+
+                            if (uses_implementation_type) {
+                                logger.trace("option uses implementation type, unwrapping");
+                                opt_value = opt_value.map((e) -> {
+                                    try {
+                                        return get_implementation_handle.invoke(((DiscordBridgeApi) e));
+                                    } catch (Throwable ex) {
+                                        throw new RuntimeException("couldn't get the implementation value", ex);
+                                    }
+                                });
+                            }
 
                             if (is_required)
                                 //noinspection OptionalGetWithoutIsPresent
@@ -915,21 +944,25 @@ public class CommandHandler {
 
                 boolean skip_next_interaction_parameter = false;
                 boolean requires_interaction = false;
+                var interaction_uses_implementation_type = false;
                 try {
                     if (method.getParameters()[0].getDeclaredAnnotation(Interaction.class) != null) {
                         logger.trace("found @Interaction on first parameter");
                         skip_next_interaction_parameter = true;
                         requires_interaction = true;
-                        if (method.getParameters()[0].getType() != SlashCommandInteraction.class
-                                && !bridge.getImplementationType(SlashCommandInteraction.class)
-                                        .map(method.getParameters()[0].getType()::equals)
-                                        .orElse(false))
-                            throw new ParsingException(String.format(
-                                    "@Interaction can only be applied to the first parameter with type canaryprism.discordbridge.api.interaction.slash.SlashCommandInteraction or %s",
-                                    bridge.getImplementationType(SlashCommandInteraction.class)
-                                            .map(Class::getName)
-                                            .orElse("<not found>")),
-                                    "with parameter " + target.getName() + "." + method.getName() + "(" + method.getParameters()[0].getType().getSimpleName() + " " + method.getParameters()[0].getName() + ")");
+                        if (method.getParameters()[0].getType() != SlashCommandInteraction.class) {
+                            if (bridge.getImplementationType(SlashCommandInteraction.class)
+                                    .map(method.getParameters()[0].getType()::equals)
+                                    .orElse(false))
+                                interaction_uses_implementation_type = true;
+                            else
+                                throw new ParsingException(String.format(
+                                        "@Interaction can only be applied to the first parameter with type canaryprism.discordbridge.api.interaction.slash.SlashCommandInteraction or %s",
+                                        bridge.getImplementationType(SlashCommandInteraction.class)
+                                                .map(Class::getName)
+                                                .orElse("<not found>")),
+                                        "with parameter " + target.getName() + "." + method.getName() + "(" + method.getParameters()[0].getType().getSimpleName() + " " + method.getParameters()[0].getName() + ")");
+                        }
                     }
                 } catch (ArrayIndexOutOfBoundsException e) {
                     logger.trace("no parameters found for method");
@@ -978,15 +1011,20 @@ public class CommandHandler {
                         var is_enum = actual_type instanceof Class<?> c && c.isEnum();
 
                         SlashCommandOptionType option_type;
+                        boolean uses_implementation_type;
                         if (is_enum) {
                             option_type = SlashCommandOptionType.INTEGER;
+                            uses_implementation_type = false;
                         } else {
                             var final_actual_type = actual_type;
-                            option_type = inferType(actual_type)
+                            var inference = inferType(actual_type)
                                     .orElseThrow(() ->
                                             new ParsingException(
                                                     "Invalid parameter type '" + final_actual_type.getTypeName() + "', only types supported by the Discord Bridge api or " + bridge + " can be used",
                                                     "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")"));
+
+                            option_type = inference.type;
+                            uses_implementation_type = inference.uses_implementation_type;
                         }
 
                         var option_name = option.name();
@@ -1159,6 +1197,7 @@ public class CommandHandler {
 
                                     var final_actual_type = actual_type;
                                     var type = inferType(actual_class)
+                                            .map(TypeInference::type) // ignore the internal type bc choices don't use any types that have an internal variant
                                             .filter((e) -> e.can_be_choices)
                                             .orElseThrow(() -> new ParsingException(
                                                     "Invalid parameter type '" + final_actual_type.getTypeName() + "', only autocompletable types supported by the Discord Bridge api or " + bridge + " can be used",
@@ -1206,11 +1245,13 @@ public class CommandHandler {
                                         option_localizations,
                                         option_required,
                                         option_type,
+                                        uses_implementation_type,
                                         null,
                                         null,
                                         data,
                                         null,
                                         null,
+                                        false,
                                         false,
                                         false,
                                         bounds_data
@@ -1246,12 +1287,14 @@ public class CommandHandler {
                                 option_description, 
                                 option_localizations,
                                 option_required,
-                                option_type, 
+                                option_type,
+                                uses_implementation_type,
                                 null, 
                                 optionchoices, 
                                 null,
                                 null,
                                 null,
+                                false,
                                 false,
                                 false,
                                 null
@@ -1278,12 +1321,14 @@ public class CommandHandler {
                                 option_description, 
                                 option_localizations,
                                 option_required,
-                                option_type, 
+                                option_type,
+                                uses_implementation_type,
                                 null, 
                                 optionchoices, 
                                 null,
                                 null,
                                 null,
+                                false,
                                 false,
                                 false,
                                 null
@@ -1330,12 +1375,14 @@ public class CommandHandler {
                                 option_description, 
                                 option_localizations,
                                 option_required,
-                                option_type, 
+                                option_type,
+                                uses_implementation_type,
                                 null, 
                                 optionchoices, 
                                 null,
                                 null,
                                 null,
+                                false,
                                 false,
                                 true,
                                 null
@@ -1348,12 +1395,14 @@ public class CommandHandler {
                                 option_description, 
                                 option_localizations,
                                 option_required,
-                                option_type, 
+                                option_type,
+                                uses_implementation_type,
                                 null,
                                 null,
                                 null, 
                                 null,
                                 null,
+                                false,
                                 false,
                                 false,
                                 bounds_data
@@ -1388,17 +1437,18 @@ public class CommandHandler {
                                 """, target.getName(), method.getName());
                     }
                     ((ArrayList<SlashCommandData>) target_list).add(new SlashCommandData(
-                        name, 
-                        description, 
-                        localizations,
-                        (server_id == 0) && command.enabledInDMs(),
-                        command.nsfw(),
-                        Optional.ofNullable(permissions).map((e) -> (e.isEmpty()) ? EnumSet.noneOf(PermissionType.class) : EnumSet.copyOf(e)).orElse(null),
-                        server_id, 
-                        options, 
-                        method,
-                        instance,
-                        requires_interaction
+                            name,
+                            description,
+                            localizations,
+                            (server_id == 0) && command.enabledInDMs(),
+                            command.nsfw(),
+                            Optional.ofNullable(permissions).map((e) -> (e.isEmpty()) ? EnumSet.noneOf(PermissionType.class) : EnumSet.copyOf(e)).orElse(null),
+                            server_id,
+                            options,
+                            method,
+                            instance,
+                            requires_interaction,
+                            interaction_uses_implementation_type
                     ));
                 } else {
                     logger.trace("depth is not 0, adding command method as a SlashCommandOption with type SUB_COMMAND or SUB_COMMAND_GROUP");
@@ -1414,19 +1464,21 @@ public class CommandHandler {
                             "in method " + target.getName() + "." + method.getName());
                     }
                     ((ArrayList<SlashCommandOptionData<?>>) target_list).add(new SlashCommandOptionData<Long>(
-                        name, 
-                        description, 
-                        localizations,
-                        false,
-                        SlashCommandOptionType.SUBCOMMAND,
-                        options, 
-                        null, 
-                        null,
-                        method,
-                        instance,
-                        requires_interaction,
-                        false,
-                        null
+                            name,
+                            description,
+                            localizations,
+                            false,
+                            SlashCommandOptionType.SUBCOMMAND,
+                            false,
+                            options,
+                            null,
+                            null,
+                            method,
+                            instance,
+                            requires_interaction,
+                            interaction_uses_implementation_type,
+                            false,
+                            null
                     ));
                 }
 
@@ -1510,17 +1562,18 @@ public class CommandHandler {
                             """, group.getName());
                     }
                     ((ArrayList<SlashCommandData>) target_list).add(new SlashCommandData(
-                        name, 
-                        description, 
-                        localizations,
-                        (server_id == 0) && group_of_commands.enabledInDMs(),
-                        group_of_commands.nsfw(),
-                        Optional.ofNullable(permissions).map((e) -> (e.isEmpty()) ? EnumSet.noneOf(PermissionType.class) : EnumSet.copyOf(e)).orElse(null),
-                        server_id, 
-                        options, 
-                        null,
-                        null,
-                        true
+                            name,
+                            description,
+                            localizations,
+                            (server_id == 0) && group_of_commands.enabledInDMs(),
+                            group_of_commands.nsfw(),
+                            Optional.ofNullable(permissions).map((e) -> (e.isEmpty()) ? EnumSet.noneOf(PermissionType.class) : EnumSet.copyOf(e)).orElse(null),
+                            server_id,
+                            options,
+                            null,
+                            null,
+                            true,
+                            false
                     ));
                 } else {
                     logger.trace("depth is not 0, adding command group as a SlashCommandOption with type SUB_COMMAND_GROUP");
@@ -1542,12 +1595,14 @@ public class CommandHandler {
                         localizations,
                         false,
                         SlashCommandOptionType.SUBCOMMAND_GROUP,
+                        false,
                         options, 
                         null,
                         null,
                         null,
                         null,
                         true,
+                        false,
                         false,
                         null
                     ));
@@ -1558,15 +1613,26 @@ public class CommandHandler {
         }
     }
 
-    private Optional<? extends SlashCommandOptionType> inferType(Type type) {
-        var compatible = bridge.getSupportedValues(SlashCommandOptionType.class)
+    record TypeInference(SlashCommandOptionType type, boolean uses_implementation_type) {}
+
+    private Optional<? extends TypeInference> inferType(Type type) {
+        var types = bridge.getSupportedValues(SlashCommandOptionType.class)
                 .stream()
                 .filter((e) ->
                         e != SlashCommandOptionType.UNKNOWN
                         && e != SlashCommandOptionType.SUBCOMMAND
                         && e != SlashCommandOptionType.SUBCOMMAND_GROUP)
-                .filter((e) -> TypeUtils.isAssignable(type, e.getTypeRepresentation())
-                        || TypeUtils.isAssignable(type, e.getInternalTypeRepresentation(bridge)))
+                .collect(Collectors.toSet());
+
+        return inferDiscordBridgeType(types, type)
+                .map((e) -> new TypeInference(e, false))
+                .or(() -> inferImplementationType(types, type)
+                        .map((e) -> new TypeInference(e, true)));
+    }
+
+    private Optional<? extends SlashCommandOptionType> inferDiscordBridgeType(Set<? extends SlashCommandOptionType> types, Type type) {
+        var compatible = types.stream()
+                .filter((e) -> TypeUtils.isAssignable(type, e.getTypeRepresentation()))
                 .collect(Collectors.toSet());
 
         return compatible.stream()
@@ -1576,6 +1642,22 @@ public class CommandHandler {
                                         .isAssignableFrom(option_type.getTypeRepresentation()))
                                 .count()));
     }
+
+
+    private Optional<? extends SlashCommandOptionType> inferImplementationType(Set<? extends SlashCommandOptionType> types, Type type) {
+        var compatible = types.stream()
+                .filter((e) -> TypeUtils.isAssignable(type, e.getInternalTypeRepresentation(bridge)))
+                .collect(Collectors.toSet());
+
+        return compatible.stream()
+                .max(Comparator.comparing((option_type) ->
+                        compatible.stream()
+                                .filter((e) -> e.getTypeRepresentation()
+                                        .isAssignableFrom(option_type.getTypeRepresentation()))
+                                .count()));
+    }
+
+
 
     private LocalizationData parseLocalizationData(Trans[] translations, String parse_trace) {
         logger.debug("parsing localization data {}", (Object)translations);
@@ -1788,7 +1870,7 @@ public class CommandHandler {
 
         var options = command.getOptions().stream().map(this::parseFromSlashCommandOption).toList();
 
-        return new SlashCommandData(name, description, localizations, enabled_in_DMs, nsfw, command.getDefaultRequiredPermissions().orElse(null), server_id, options, null, null, false);
+        return new SlashCommandData(name, description, localizations, enabled_in_DMs, nsfw, command.getDefaultRequiredPermissions().orElse(null), server_id, options, null, null, false, false);
     }
     @SuppressWarnings({"unchecked", "rawtypes"})
     private SlashCommandOptionData<?> parseFromSlashCommandOption(SlashCommandOption option) {
@@ -1819,7 +1901,7 @@ public class CommandHandler {
             default -> null;
         };
 
-        return new SlashCommandOptionData(name, description, localizations, required, type, options, choices, null, null, null, false, false, bounds);
+        return new SlashCommandOptionData(name, description, localizations, required, type, false, options, choices, null, null, null, false, false, false, bounds);
     }
     private SlashCommandOptionChoiceData<?> parseFromSlashCommandOptionChoice(SlashCommandOptionChoice choice) {
         logger.trace("parsing SlashCommandOptionChoice {}", choice);

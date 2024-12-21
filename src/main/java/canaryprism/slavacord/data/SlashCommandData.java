@@ -21,7 +21,8 @@ public record SlashCommandData(
     List<? extends SlashCommandOptionData<?>> options,
     Method method,
     Object instance,
-    boolean requires_interaction
+    boolean requires_interaction,
+    boolean interaction_uses_implementation_type
 ) implements Data {
     @Override
     public String toString() {
