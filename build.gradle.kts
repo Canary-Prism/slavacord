@@ -7,7 +7,7 @@ plugins {
 
 group = "io.github.canary-prism"
 version = "4.0.0"
-description = "slavacord"
+description = "A library addon for Discord Bridge that adds a more convenient syntax for creating slash commands."
 
 repositories {
     mavenCentral()
@@ -35,8 +35,6 @@ java {
         languageVersion = JavaLanguageVersion.of(17)
     }
 
-    withSourcesJar()
-    withJavadocJar()
     modularity.inferModulePath = true
 }
 
@@ -97,4 +95,8 @@ mavenPublishing {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+tasks.withType<PublishToMavenRepository>().configureEach {
+    notCompatibleWithConfigurationCache("Publishing tasks involve non-cacheable external interactions.")
 }
