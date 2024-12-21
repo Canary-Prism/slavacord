@@ -8,6 +8,6 @@ import java.lang.reflect.Method;
 public record AutocompletableData(Method method, Object instance, SlashCommandOptionType type, Param[] params, AutocompleteFilter filter) {
 
     public enum Param {
-        INTERACTION, VALUE
+        INTERACTION, IMPLEMENTATION_INTERACTION, VALUE
     }
 }

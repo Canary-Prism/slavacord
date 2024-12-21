@@ -401,6 +401,7 @@ public class CommandHandler {
                         for (var param : autocompletable_data.params()) {
                             parameters.add(switch (param) {
                                 case INTERACTION -> interaction;
+                                case IMPLEMENTATION_INTERACTION -> interaction.getImplementation();
                                 case VALUE -> user_input;
                             });
                         }
@@ -1739,14 +1740,16 @@ public class CommandHandler {
                     var params = new LinkedHashSet<AutocompletableData.Param>();
                     logger.trace("parsing through parameter types");
                     for (var param : e.getParameters()) {
-                        var type = param.getType();
+                        var type = param.getParameterizedType();
                         logger.trace("parsing type '{}'", type);
 
                         boolean success;
                         if (type == SlashCommandAutocompleteInteraction.class)
                             success = params.add(AutocompletableData.Param.INTERACTION);
-                        else if (Reflection.toBoxedType(type) == Reflection.toBoxedType(parameter_class))
+                        else if (TypeUtils.isAssignable(parameter_class, type))
                             success = params.add(AutocompletableData.Param.VALUE);
+                        else if (TypeUtils.equals(bridge.getImplementationType(SlashCommandAutocompleteInteraction.class).orElse(null), type))
+                            success = params.add(AutocompletableData.Param.IMPLEMENTATION_INTERACTION);
                         else {
                             logger.trace("unrecognised type '{}'", type);
                             break param_parse;
