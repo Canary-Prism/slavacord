@@ -32,6 +32,7 @@ import canaryprism.slavacord.data.autocomplete.filter.AutocompleteFilterData;
 import canaryprism.slavacord.data.optionbounds.*;
 import canaryprism.slavacord.exceptions.ParsingException;
 import canaryprism.slavacord.util.Reflection;
+import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.reflect.TypeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -1004,9 +1005,13 @@ public class CommandHandler {
                         }
 
                         var actual_type = unwrapped_type;
-                        if (unwrapped_type instanceof Class<?> c && ServerChannel.class.isAssignableFrom(c)) {
+                        if (TypeUtils.isAssignable(actual_type, ServerChannel.class)) {
                             actual_type = ServerChannel.class;
                             logger.trace("parameter type {} is subtype of ServerChannel, simplifying to ServerChannel for option type parsing", unwrapped_type);
+                        }
+                        if (TypeUtils.isAssignable(actual_type, bridge.getImplementationType(ServerChannel.class).orElse(null))) {
+                            actual_type = bridge.getImplementationType(ServerChannel.class).orElseThrow();
+                            logger.trace("parameter type {} is subtype of internal equivalent of ServerChannel, simplifying to internal equivalent '{}' for option type parsing", unwrapped_type, actual_type);
                         }
 
                         var is_enum = actual_type instanceof Class<?> c && c.isEnum();
@@ -1625,9 +1630,14 @@ public class CommandHandler {
                         && e != SlashCommandOptionType.SUBCOMMAND_GROUP)
                 .collect(Collectors.toSet());
 
+        if (type instanceof Class<?> c)
+            type = ClassUtils.primitiveToWrapper(c);
+
+        var final_type = type;
+
         return inferDiscordBridgeType(types, type)
                 .map((e) -> new TypeInference(e, false))
-                .or(() -> inferImplementationType(types, type)
+                .or(() -> inferImplementationType(types, final_type)
                         .map((e) -> new TypeInference(e, true)));
     }
 
