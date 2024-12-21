@@ -1,5 +1,8 @@
 # Changelog
 
+## v4.0.0
+- migrated entire library to use Discord Bridge
+
 ## v3.0.3
 - fixed bug where all null and blank String returns are still ignored
 

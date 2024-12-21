@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.canary-prism"
-version = "3.0.3"
+version = "4.0.0"
 description = "slavacord"
 
 repositories {
