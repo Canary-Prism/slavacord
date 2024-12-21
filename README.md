@@ -3,9 +3,7 @@
 i did not, in fact, come up with this name  
 all blame goes to the person who came up with it (*you know who you are*)
 
-### this library requires [Javacord](https://github.com/Javacord/Javacord)
-
-anyways this library (or is it framework,,,?) helps make slash commands in Javacord (and actually all the other Discord api wrappers in general as far as i can tell) much less painful.
+anyways this library (or is it framework,,,?) is a compliment to [Discord Bridge](https://github.com/Canary-Prism/discord-bridge) and makes slash commands much less painful to write than most other Discord api wrappers (as far as i can tell)
 
 it uses Reflection and Annotations and such so that you write methods for a command and that becomes both the command's declaration and implementation
 
@@ -31,12 +29,32 @@ why?
 ### ant
 see: [sbt](#sbt)
 
+## Discord Bridge
+
+this library depends on [Discord Bridge](https://github.com/Canary-Prism/discord-bridge) 
+which provides a unified api for other Discord api wrappers
+
+to interface with the actual api wrapper you're using, whatever that may be, the implementation
+layer to translate from `discord-bridge-api` to the api wrapper you're using must be present
+
+here is a [list of implementations Discord Bridge provides](https://github.com/Canary-Prism/discord-bridge#implementations), if the api you're using is on that list it should work out of the box, if not you need to add a dependency that provides the implementation for the api you're using  
+if you want to exclude the implmentations you don't need you can do so with the same syntax as [for Discord Bridge](https://github.com/Canary-Prism/discord-bridge#adding-as-dependency-and-whatever)
+
 ## How use
 
+This library uses Discord Bridge, so any discord library you use should work as long as an implementation in Discord Bridge is present
+
+additionally, if your implementation supports it, all instances where the library asks you to declare a method with signature accepting some discord-bridge-api object may be replaced with the equivalent type in the implementation
+
+to start, you must pick a discord api library, the popular ones are [JDA](https://jda.wiki), [Discord4J](https://docs.discord4j.com/), and [Javacord](https://javacord.org/)
+
+then add your implementation of Discord Bridge as a dependency if it is not in the [list of default supported implementations](https://github.com/Canary-Prism/discord-bridge#implementations) mentioned previously
+
 ### Command Handler
-to start, you need to make a `CommandHandler` 
+you now need to make a `CommandHandler` from your library's global api object  
+a global api object is some object representing the login session of your bot to the Discord api, you use it to perform global actions with the bot
 ```java
-DiscordApi api = getApiSomehow();
+var library_api = getApiSomehow();
 var handler = new CommandHandler(api);
 ```
 
@@ -70,19 +88,22 @@ handler.register(new InstanceMethods(), true);
 
 you might have noticed the `true` that's also passed to the `register()` method. that's a boolean for whether or not to overwrite existing registered commands the discord bot. when mass registering commands to discord's api you cannot append commands. if you pass false for overwrite the library will attempt to merge the declared commands with existing commands obtained from the api and then submit all of those in order to preserve existing commands.
 
-in order to.. actually interact with the api from the command, you can just use the basic Javacord method of obtaining the `SlashCommandInteraction` object given by the event objects  
+in order to.. actually interact with the api from the command, you can just use the basic Discord Bridge method of obtaining the `SlashCommandInteraction` object given by the event objects  
 you may add `SlashCommandInteraction` as a parameter in your method as long as the parameter is annotated with `@Interaction` *and* it is the FIRST parameter in your method
 ```java
 // in a commands class..
 @Command(name = "ping", description = "pong !")
 void ping(@Interaction SlashCommandInteraction interaction) {
     interaction.createImmediateResponder()
-        .setContent("Pong !")
-        .setFlags(MessageFlag.EPHEMERAL);
-        .respond()
-        .join();
+            .setContent("Pong !")
+            .setFlags(MessageFlag.EPHEMERAL);
+            .respond()
+            .join();
 }
 ```
+
+again since this is Discord Bridge the `SlashCommandInteraction` may be replaced with whatever the equivalent is in your library
+
 now obviously this is all well and good but it is also very verbose (it's Java obviously it is)
 
 ### @ReturnsResponse
@@ -135,11 +156,11 @@ here is a list of types that are supported by discord and this library:
 - `java.lang.Double`
 - `boolean`
 - `java.lang.Boolean`
-- `org.javacord.api.entity.user.User`
-- `org.javacord.api.entity.channel.ServerChannel` or subtypes (see [Channel Type Bounds](#channel-type-bounds))
-- `org.javacord.api.entity.Role`
-- `org.javacord.api.entity.Mentionable`
-- `org.javacord.api.entity.Attachment`
+- `canaryprism.discordbridge.api.entities.user.User` or library specific equivalent
+- `canaryprism.discordbridge.api.channel.ServerChannel` or library specific equivalent or either's subtypes (see [Channel Type Bounds](#channel-type-bounds))
+- `canaryprism.discordbridge.api.server.permission.Role` or library specific equivalent
+- `canaryprism.discordbridge.api.entities.Mentionable` or library specific equivalent
+- `canaryprism.discordbridge.api.message.Attachment` or library specific equivalent
 - any Enum
 
 Enums are automatically converted to longs with "option choices" on their ordinals for discord, then converted back for you
@@ -202,7 +223,7 @@ these values are all inclusive (i think)
 you can also limit what kinds of channels are allowed with `@ChannelTypeBounds`
 ```java
 // in command method parameter list...
-@ChannelTypeBounds({ ChannelType.SERVER_TEXT_CHANNEL, ChannelType.SERVER_VOICE_CHANNEL })
+@ChannelTypeBounds({ ChannelType.SERVER_TEXT, ChannelType.SERVER_VOICE })
 @Option(name = "channel") ServerChannel channel
 ```
 in this example users may only select a ServerTextChannel or ServerVoiceChannel for this slash command option
@@ -211,7 +232,6 @@ because subtyping is fun you are also allowed to specify a **subtype** of `Serve
 ```java
 // in command method parameter list...
 @Option(name = "text_channel") ServerTextChannel text_channel,
-@Option(name = "voice_channel") ServerVoiceChannel vc,
 ```
 
 you can even use both methods at the same time, specify multiple specific channel types with `@ChannelTypeBounds` and declare the parameter's type as a subtype that they all share to minimise casting. however obviously all of the specified channel types must be able to be assigned to your parameter type
