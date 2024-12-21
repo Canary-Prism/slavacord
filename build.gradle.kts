@@ -40,11 +40,11 @@ java {
     modularity.inferModulePath = true
 }
 
-tasks.withType<JavaCompile>() {
+tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
 }
 
-tasks.withType<Javadoc>() {
+tasks.withType<Javadoc> {
     options.encoding = "UTF-8"
 }
 
@@ -70,7 +70,7 @@ mavenPublishing {
         name = project.name
         description = project.description
 
-        url = "https://github.com/Canary-Prism/discord-bridge"
+        url = "https://github.com/Canary-Prism/slavacord"
 
         licenses {
             license {
