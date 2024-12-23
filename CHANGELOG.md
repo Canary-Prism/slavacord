@@ -1,5 +1,8 @@
 # Changelog
 
+## v5.1.1
+- fixed bug where enum choices still didn't work
+
 ## v5.1.0
 - added support for double option choices
 - fixed bug where enum choices were not represented properly
