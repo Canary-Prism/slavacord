@@ -23,7 +23,7 @@ dependencies {
 
     compileOnly(libs.jetbrains.annotations)
 
-    implementation(libs.discord.bridge)
+    api(libs.discord.bridge)
 
     implementation(libs.apache.commons.lang)
 
