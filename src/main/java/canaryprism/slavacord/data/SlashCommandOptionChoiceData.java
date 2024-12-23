@@ -19,6 +19,9 @@ public record SlashCommandOptionChoiceData<T>(
     }
 
     public canaryprism.discordbridge.api.data.interaction.slash.SlashCommandOptionChoiceData toSlashCommandOptionChoiceBuilder() {
+        var value = (this.value instanceof Enum<?> enum_value) ?
+                enum_value.ordinal()
+                : this.value;
         var builder = new canaryprism.discordbridge.api.data.interaction.slash.SlashCommandOptionChoiceData(name, value);
 
         builder.setNameLocalizations(localizations);
