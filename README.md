@@ -169,7 +169,7 @@ speaking of which
 
 ### Option Choices
 
-the `@Option` parameter has the properties `longChoices` and `stringChoices` which let you turn these options into option *choices*, where the user can only select from a provided set of values, these are represented with annotations `@OptionChoiceLong` and `@OptionChoiceString` and are pretty much 1 to 1 with discord's api
+the `@Option` parameter has the properties `longChoices`, `doubleChoices` and `stringChoices` which let you turn these options into option *choices*, where the user can only select from a provided set of values, these are represented with annotations `@OptionChoiceLong`, `@OptionChoiceDouble` and `@OptionChoiceString` and are pretty much 1 to 1 with discord's api
 ```java
 // in command method parameter list..
 @Option(name = "day_of_week", longChoices = {

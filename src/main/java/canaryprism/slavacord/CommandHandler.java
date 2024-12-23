@@ -1047,6 +1047,7 @@ public class CommandHandler {
                         var option_required = !(parameter_type instanceof ParameterizedType pt && pt.getRawType().equals(Optional.class));
                         var option_string_choices = option.stringChoices();
                         var option_long_choices = option.longChoices();
+                        var option_double_choices = option.doubleChoices();
 
                         OptionBoundsData bounds_data = null;
 
@@ -1338,6 +1339,40 @@ public class CommandHandler {
                                 false,
                                 false,
                                 null
+                            ));
+
+                        } else if (option_double_choices.length > 0) {
+                            logger.trace("found double choices on parameter");
+                            var optionchoices = new ArrayList<SlashCommandOptionChoiceData<Double>>();
+                            if (option_type != SlashCommandOptionType.NUMBER) {
+                                throw new ParsingException("Invalid option choice type at parameter " + parameter.getName() + " in method " + method.getName(), "at class " + target.getName());
+                            }
+                            if (bounds_data != null) {
+                                throw new ParsingException("Option Choices cannot be used when bounds are present", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                            }
+                            for (var choice : option_double_choices) {
+                                optionchoices.add(new SlashCommandOptionChoiceData<Double>(
+                                        choice.name(),
+                                        choice.value(),
+                                        parseOptionChoiceTranslations(choice.translations(), "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")")
+                                ));
+                            }
+                            options.add(new SlashCommandOptionData<Double>(
+                                    option_name,
+                                    option_description,
+                                    option_localizations,
+                                    option_required,
+                                    option_type,
+                                    uses_implementation_type,
+                                    null,
+                                    optionchoices,
+                                    null,
+                                    null,
+                                    null,
+                                    false,
+                                    false,
+                                    false,
+                                    null
                             ));
 
                         } else if (is_enum) {

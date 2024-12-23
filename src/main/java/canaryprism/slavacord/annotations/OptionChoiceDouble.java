@@ -4,11 +4,11 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
 /**
- * <p>an option choice of type {@code long}</p>
+ * <p>an option choice of type {@code double}</p>
  */
 @Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
 @Target({})
-public @interface OptionChoiceLong {
+public @interface OptionChoiceDouble {
 
     /**
      * the name of the choice shown to the user
@@ -17,10 +17,10 @@ public @interface OptionChoiceLong {
     String name();
 
     /**
-     * the long value of the choice
-     * @return the long value of the choice
+     * the double value of the choice
+     * @return the double value of the choice
      */
-    long value();
+    double value();
 
     /**
      * translations for the option choice names
