@@ -1,5 +1,8 @@
 # Changelog
 
+## v5.0.0
+- migrated library again to use Discord Bridge version 3.0.0
+
 ## v4.0.0
 - migrated entire library to use Discord Bridge
 
