@@ -1,5 +1,8 @@
 # Changelog
 
+## v5.1.2
+- upgraded to Discord Bridge version 3.0.1
+
 ## v5.1.1
 - fixed bug where enum choices still didn't work
 
