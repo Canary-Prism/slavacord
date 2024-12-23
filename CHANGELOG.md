@@ -1,5 +1,8 @@
 # Changelog
 
+## v5.0.1
+- made the discord-bridge dependency accessibly transitive
+
 ## v5.0.0
 - migrated library again to use Discord Bridge version 3.0.0
 
