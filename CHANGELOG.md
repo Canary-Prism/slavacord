@@ -1,5 +1,9 @@
 # Changelog
 
+## v5.1.0
+- added support for double option choices
+- fixed bug where enum choices were not represented properly
+
 ## v5.0.1
 - made the discord-bridge dependency accessibly transitive
 
