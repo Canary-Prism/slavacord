@@ -663,8 +663,8 @@ public class CommandHandler {
      * <p>this also technically doesn't stop you from registering more commands after you call it, the listener just won't work obviously</p>
      */
     public void stop() {
-        api.removeListener(listener);
-        api.removeListener(autocomplete_listener);
+        api.removeListener(SlashCommandInvokeListener.class, listener);
+        api.removeListener(SlashCommandAutocompleteListener.class, autocomplete_listener);
         logger.info("Stopped CommandHandler event listeners");
     }
 
@@ -1878,7 +1878,7 @@ public class CommandHandler {
         var name = command.getName();
         var description = command.getDescription();
         var localizations = new LocalizationData(command.getNameLocalizations(), command.getDescriptionLocalizations());
-        var enabled_in_DMs = command.isEnabledInDMs();
+        @SuppressWarnings("deprecation") var enabled_in_DMs = command.isEnabledInDMs();
         var nsfw = command.isNSFW();
 
         var options = command.getOptions().stream().map(this::parseFromSlashCommandOption).toList();

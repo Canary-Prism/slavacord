@@ -31,7 +31,7 @@ see: [sbt](#sbt)
 
 ## Discord Bridge
 
-this library depends on [Discord Bridge](https://github.com/Canary-Prism/discord-bridge) 
+this library depends on [Discord Bridge](https://github.com/Canary-Prism/discord-bridge) version 3.0.0 
 which provides a unified api for other Discord api wrappers
 
 to interface with the actual api wrapper you're using, whatever that may be, the implementation
@@ -156,10 +156,10 @@ here is a list of types that are supported by discord and this library:
 - `java.lang.Double`
 - `boolean`
 - `java.lang.Boolean`
-- `canaryprism.discordbridge.api.entities.user.User` or library specific equivalent
+- `canaryprism.discordbridge.api.entity.user.User` or library specific equivalent
 - `canaryprism.discordbridge.api.channel.ServerChannel` or library specific equivalent or either's subtypes (see [Channel Type Bounds](#channel-type-bounds))
 - `canaryprism.discordbridge.api.server.permission.Role` or library specific equivalent
-- `canaryprism.discordbridge.api.entities.Mentionable` or library specific equivalent
+- `canaryprism.discordbridge.api.entity.Mentionable` or library specific equivalent
 - `canaryprism.discordbridge.api.message.Attachment` or library specific equivalent
 - any Enum
 
@@ -226,12 +226,12 @@ you can also limit what kinds of channels are allowed with `@ChannelTypeBounds`
 @ChannelTypeBounds({ ChannelType.SERVER_TEXT, ChannelType.SERVER_VOICE })
 @Option(name = "channel") ServerChannel channel
 ```
-in this example users may only select a ServerTextChannel or ServerVoiceChannel for this slash command option
+in this example users may only select a ServerMessageChannel or ServerVoiceChannel for this slash command option
 
 because subtyping is fun you are also allowed to specify a **subtype** of `ServerChannel` in order to limit allowed channels that way
 ```java
 // in command method parameter list...
-@Option(name = "text_channel") ServerTextChannel text_channel,
+@Option(name = "text_channel") ServerMessageChannel text_channel,
 ```
 
 you can even use both methods at the same time, specify multiple specific channel types with `@ChannelTypeBounds` and declare the parameter's type as a subtype that they all share to minimise casting. however obviously all of the specified channel types must be able to be assigned to your parameter type
