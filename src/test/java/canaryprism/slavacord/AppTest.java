@@ -201,4 +201,23 @@ public class AppTest {
 
         handler.register(new Mewo(), true);
     }
+
+    @Test
+    public void enumChoices() {
+        var handler = new CommandHandler(new MockDiscordApi());
+
+        enum Meow {
+            mrrp, nya
+        }
+        @CreateGlobal
+        class Mewo implements Commands {
+            @Command(name = "mewo", description = "mewo")
+            public void mewo(@Option(name = "nya", description = "nya") Meow nya) {
+                // do nothing
+            }
+
+        }
+
+        handler.register(new Mewo(), true);
+    }
 }
