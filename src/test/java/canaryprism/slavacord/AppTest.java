@@ -12,8 +12,6 @@ import canaryprism.slavacord.autocomplete.annotations.Autocompleter;
 import canaryprism.slavacord.autocomplete.annotations.Autocompletes;
 import canaryprism.slavacord.exceptions.ParsingException;
 import canaryprism.slavacord.mock.MockDiscordApi;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.core.config.Configurator;
 import org.javacord.api.entity.channel.RegularServerChannel;
 import org.junit.jupiter.api.Test;
 
@@ -28,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class AppTest {
 
     static {
-        Configurator.setRootLevel(Level.INFO);
+        System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "info");
     }
     
     @Test
@@ -162,7 +160,10 @@ public class AppTest {
 
     @Test
     public void boundedWildcardAutocompleteProviders() {
-        Configurator.setRootLevel(Level.TRACE);
+//        Configurator.setRootLevel(Level.TRACE)
+        System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "trace");
+
+
         var handler = new CommandHandler(new MockDiscordApi());
 
         @CreateGlobal
@@ -183,7 +184,9 @@ public class AppTest {
 
     @Test
     public void mixingBoxingTypesAutocompleter() {
-        Configurator.setRootLevel(Level.TRACE);
+//        Configurator.setRootLevel(Level.TRACE);
+        System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "trace");
+
         var handler = new CommandHandler(new MockDiscordApi());
 
         @CreateGlobal
