@@ -34,10 +34,10 @@ import canaryprism.slavacord.exceptions.ParsingException;
 import canaryprism.slavacord.util.Reflection;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.reflect.TypeUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.annotation.Annotation;
 import java.lang.invoke.MethodHandle;
@@ -59,7 +59,7 @@ import java.util.stream.Stream;
  */
 public class CommandHandler {
 
-    private static final Logger logger = LogManager.getLogger(CommandHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(CommandHandler.class);
 
     private static final long BOUNDS_MAX = 1L << 53;
     private static final long BOUNDS_MIN = -BOUNDS_MAX;
@@ -810,7 +810,7 @@ public class CommandHandler {
                                 && processed_command.server_id() == commands.get(i).server_id()
                                 && !processed_command.equals(commands.get(i))) {
                             logger.trace("replacing old command {} from memory with new command {}",
-                                commands.get(i)::toString, processed_command::toString);
+                                commands.get(i), processed_command);
                             commands.remove(i--);
                         }
                     }
@@ -819,7 +819,7 @@ public class CommandHandler {
                 logger.debug("overwrite set to true, removing all older commands with the same server id from memory");
                 for (int i = 0; i < commands.size(); i++) {
                     if (commands.get(i).server_id() == server_id) {
-                        logger.trace("removing old command {} from memory", commands.get(i)::toString);
+                        logger.trace("removing old command {} from memory", commands.get(i));
                         commands.remove(i--);
                     }
                 }
@@ -1074,7 +1074,7 @@ public class CommandHandler {
                                     logger.warn("""
                                             Duplicate Channel bound types found {} with parameter {}.{}({} {}) !!
                                             ignoring duplicate
-                                            """, () -> type, target::getName, method::getName, parameter.getType()::getSimpleName, parameter::getName);
+                                            """, type, target.getName(), method.getName(), parameter.getType().getSimpleName(), parameter.getName());
                                 }
                             }
 
@@ -1108,7 +1108,7 @@ public class CommandHandler {
                                 logger.warn("""
                                         DoubleBounds has no effect
                                             with parameter {}.{}({} {})
-                                        """, target::getName, method::getName, parameter_type::toString, parameter::getName);
+                                        """, target.getName(), method.getName(), parameter_type, parameter.getName());
                             } else if (min != Double.NEGATIVE_INFINITY && min < BOUNDS_MIN) {
                                 throw new ParsingException("DoubleBounds min must not be smaller than -2^53", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
                             } else if (max != Double.POSITIVE_INFINITY && max > BOUNDS_MAX) {
@@ -1137,7 +1137,7 @@ public class CommandHandler {
                                 logger.warn("""
                                         LongBounds has no effect
                                             with parameter {}.{}({} {})
-                                        """, target::getName, method::getName, parameter_type::toString, parameter::getName);
+                                        """, target.getName(), method.getName(), parameter_type, parameter.getName());
                             } else if (min != Long.MIN_VALUE && min < BOUNDS_MIN) {
                                 throw new ParsingException("LongBounds min must not be smaller than -2^53", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
                             } else if (max != Long.MAX_VALUE && max > BOUNDS_MAX) {
@@ -1169,7 +1169,7 @@ public class CommandHandler {
                                 logger.warn("""
                                         StringLengthBounds has no effect
                                             with parameter {}.{}({} {})
-                                        """, target::getName, method::getName, parameter_type::toString, parameter::getName);
+                                        """, target.getName(), method.getName(), parameter_type, parameter.getName());
                             }
 
                             bounds_data = new StringLengthBoundsData(min, max);
@@ -1193,7 +1193,7 @@ public class CommandHandler {
                                 var supplier_method_name = autocomplete.autocompleter();
 
                                 try {
-                                    logger.debug("attempting to resolve autocomplete supplier method for parameter {}.{}({} {})", target::getName, method::getName, parameter_type::toString, parameter::getName);
+                                    logger.debug("attempting to resolve autocomplete supplier method for parameter {}.{}({} {})", target.getName(), method.getName(), parameter_type, parameter.getName());
 
                                     var autocompleter = obtainAutocompleterMethod(supplier_class, supplier_method_name, actual_class);
 

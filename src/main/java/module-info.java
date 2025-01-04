@@ -5,7 +5,7 @@
 module canaryprism.slavacord {
 //    requires transitive org.javacord.api;
     requires canaryprism.discordbridge.api;
-    requires org.apache.logging.log4j;
+    requires org.slf4j;
     requires static org.jetbrains.annotations;
     requires org.apache.commons.lang3;
 

@@ -2,10 +2,10 @@
 # https://docs.gradle.org/current/userguide/platforms.html#sub::toml-dependencies-format
 
 [versions]
-log4j = "2.17.2"
+slf4j = "2.0.16"
 
 javacord = "3.8.0"
-discord-bridge = "3.0.1"
+discord-bridge = "4.1.0"
 
 apache-commons-lang = "3.17.0"
 
@@ -14,8 +14,8 @@ jetbrains-annotations = "24.0.0"
 junit = "5.11.0"
 
 [libraries]
-log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }
-log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
 
 javacord = { module = "org.javacord:javacord", version.ref = "javacord" }
 discord-bridge = { module = "io.github.canary-prism:discord-bridge", version.ref = "discord-bridge" }

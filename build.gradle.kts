@@ -18,7 +18,7 @@ dependencies {
     testImplementation(libs.junit.jupiter.params)
     testImplementation(platform("org.junit:junit-bom:5.11.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
-    testImplementation(libs.log4j.core)
+    testImplementation(libs.slf4j.simple)
     testImplementation(libs.javacord)
 
     compileOnly(libs.jetbrains.annotations)
@@ -27,7 +27,7 @@ dependencies {
 
     implementation(libs.apache.commons.lang)
 
-    implementation(libs.log4j.api)
+    implementation(libs.slf4j.api)
 }
 
 java {
