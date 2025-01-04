@@ -17,7 +17,7 @@ it uses Reflection and Annotations and such so that you write methods for a comm
 <dependency>
   <groupId>io.github.canary-prism</groupId>
   <artifactId>slavacord</artifactId>
-  <version>5.1.1</version>
+  <version>6.0.0</version>
 </dependency>
 ```
 ### Gradle:
@@ -31,7 +31,7 @@ see: [sbt](#sbt)
 
 ## Discord Bridge
 
-this library depends on [Discord Bridge](https://github.com/Canary-Prism/discord-bridge) version 3.0.1 
+this library depends on [Discord Bridge](https://github.com/Canary-Prism/discord-bridge) version 4.1.0 
 which provides a unified api for other Discord api wrappers
 
 to interface with the actual api wrapper you're using, whatever that may be, the implementation

@@ -1,5 +1,9 @@
 # Changelog
 
+## v6.0.0
+- upgraded discord-bridge version to 4.1.0
+- migrated logging from log4j2 to slf4j
+
 ## v5.1.2
 - upgraded to Discord Bridge version 3.0.1
 
