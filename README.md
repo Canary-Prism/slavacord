@@ -17,7 +17,7 @@ it uses Reflection and Annotations and such so that you write methods for a comm
 <dependency>
   <groupId>io.github.canary-prism</groupId>
   <artifactId>slavacord</artifactId>
-  <version>6.0.0</version>
+  <version>6.0.1</version>
 </dependency>
 ```
 ### Gradle:
