@@ -1,5 +1,8 @@
 # Changelog
 
+## v6.0.2
+- fixed optional arguments being asserted to be present
+
 ## v6.0.1
 - upgraded discord-bridge version to 4.1.3
 
