@@ -197,8 +197,7 @@ public class CommandHandler {
                         var option_name = slash_command_option_data.name();
                         if (!slash_command_option_data.stores_enum()) {
                             var opt_value = interaction_options.getArgumentByName(option_name)
-                                    .orElseThrow()
-                                    .getValue();
+                                    .flatMap(SlashCommandInteractionOption::getValue);
 
                             if (uses_implementation_type) {
                                 logger.trace("option uses implementation type, unwrapping");
