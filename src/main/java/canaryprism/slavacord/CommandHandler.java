@@ -1705,12 +1705,12 @@ public class CommandHandler {
 
 
     private LocalizationData parseLocalizationData(Trans[] translations, String parse_trace) {
-        logger.debug("parsing localization data {}", (Object)translations);
+        logger.trace("parsing localization data {}", (Object)translations);
         var names = new HashMap<DiscordLocale, String>();
         var descriptions = new HashMap<DiscordLocale, String>();
 
         for (var translation : translations) {
-            logger.trace("parsing translation {}", translation);
+            logger.debug("parsing translation {}", translation);
             var locale = translation.locale();
             var name = translation.name();
             var description = translation.description();
@@ -1779,7 +1779,7 @@ public class CommandHandler {
                 }
             })
             .flatMap((e) -> {
-                logger.trace("parsing method '{}'", e);
+                logger.debug("parsing method '{}'", e);
                 param_parse: {
                     var params = new LinkedHashSet<AutocompletableData.Param>();
                     logger.trace("parsing through parameter types");
