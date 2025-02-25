@@ -1,5 +1,9 @@
 # Changelog
 
+## v6.0.3
+- changed some logger messages, "parsing localization data" is now TRACE and parsing methods is now DEBUG
+- upgraded discord-bridge version to 4.1.4
+
 ## v6.0.2
 - fixed optional arguments being asserted to be present
 
