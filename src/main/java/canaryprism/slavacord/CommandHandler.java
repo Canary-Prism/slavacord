@@ -718,7 +718,7 @@ public class CommandHandler {
 
     @SuppressWarnings("java:S127")
     private void register(Commands target_instance, Class<? extends Commands> target, boolean overwrites) {
-        logger.debug("registering commands from class {}, overwriting set to {}", target, false);
+        logger.debug("registering commands from class {}, overwriting set to {}", target, overwrites);
         server_id = -1;
 
         var new_commands = new ArrayList<SlashCommandData>();
