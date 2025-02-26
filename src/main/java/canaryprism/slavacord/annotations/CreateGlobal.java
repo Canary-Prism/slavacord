@@ -18,7 +18,7 @@ public @interface CreateGlobal {
      *
      * <p>If the value contains {@link ContextType#OTHER_DM}, {@link #install()} must contain {@link InstallationType#USER_INSTALL}</p>
      *
-     * <p>If not specified default is empty array which is interpreted as all of them</p>
+     * <p>If not specified default is empty array which is interpreted as undefined and discord-bridge implementation specific</p>
      *
      * @return The contexts in which the commands can be used
      */
@@ -32,7 +32,7 @@ public @interface CreateGlobal {
      * when you're interacting with the bot as joined into a server, not installed on you as a user
      * </p>
      *
-     * <p>If not specified default is empty array which is interpreted as all of them</p>
+     * <p>If not specified default is empty array which is interpreted as undefined and discord-bridge implementation specific</p>
      *
      * @return Where the commands should be installed
      */
