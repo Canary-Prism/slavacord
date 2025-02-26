@@ -1,5 +1,8 @@
 # Changelog
 
+## v7.0.2
+- fixed empty context or installation not being handled properly
+
 ## v7.0.1
 - fixed bug where it doesn't actually apply the context and installation data
 
