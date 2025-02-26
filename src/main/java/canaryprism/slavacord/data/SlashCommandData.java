@@ -90,6 +90,12 @@ public record SlashCommandData(
                     .toList());
         }
 
+        if (contexts != null)
+            builder.setAllowedContexts(contexts);
+
+        if (install != null)
+            builder.setAllowedInstallationTypes(install);
+
         return builder;
     }
 }
