@@ -29,6 +29,15 @@ public record SlashCommandData(
     boolean requires_interaction,
     boolean interaction_uses_implementation_type
 ) implements Data {
+
+    public SlashCommandData {
+        if (contexts == null || contexts.isEmpty())
+            contexts = EnumSet.allOf(ContextType.class);
+
+        if (install == null || install.isEmpty())
+            install = EnumSet.allOf(InstallationType.class);
+    }
+
     @Override
     public String toString() {
         return toString(0);
