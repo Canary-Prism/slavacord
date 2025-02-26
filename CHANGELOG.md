@@ -1,5 +1,8 @@
 # Changelog
 
+## v7.0.1
+- fixed bug where it doesn't actually apply the context and installation data
+
 ## v7.0.0
 - upgraded discord-bridge version to 6.0.0
 - added support for ContextType and InstallationType
