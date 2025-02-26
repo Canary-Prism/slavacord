@@ -1,5 +1,10 @@
 # Changelog
 
+## v7.0.0
+- upgraded discord-bridge version to 6.0.0
+- added support for ContextType and InstallationType
+- deprecated enabledInDMs
+
 ## v6.0.3
 - changed some logger messages, "parsing localization data" is now TRACE and parsing methods is now DEBUG
 - upgraded discord-bridge version to 4.1.4
