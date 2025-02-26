@@ -30,15 +30,12 @@ public record SlashCommandData(
     boolean interaction_uses_implementation_type
 ) implements Data {
 
-    private static final EnumSet<ContextType> ALL_CONTEXTS = EnumSet.complementOf(EnumSet.of(ContextType.UNKNOWN));
-    private static final EnumSet<InstallationType> ALL_INSTALLS = EnumSet.complementOf(EnumSet.of(InstallationType.UNKNOWN));
-
     public SlashCommandData {
         if (contexts == null || contexts.isEmpty())
-            contexts = ALL_CONTEXTS;
+            contexts = null;
 
         if (install == null || install.isEmpty())
-            install = ALL_INSTALLS;
+            install = null;
     }
 
     @Override
