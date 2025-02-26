@@ -10,11 +10,14 @@ import canaryprism.discordbridge.api.channel.ChannelType;
 import canaryprism.discordbridge.api.channel.ServerChannel;
 import canaryprism.discordbridge.api.event.interaction.SlashCommandAutocompleteEvent;
 import canaryprism.discordbridge.api.event.interaction.SlashCommandInvokeEvent;
+import canaryprism.discordbridge.api.interaction.ContextType;
+import canaryprism.discordbridge.api.interaction.InstallationType;
 import canaryprism.discordbridge.api.interaction.slash.*;
 import canaryprism.discordbridge.api.listener.interaction.SlashCommandAutocompleteListener;
 import canaryprism.discordbridge.api.listener.interaction.SlashCommandInvokeListener;
 import canaryprism.discordbridge.api.message.MessageFlag;
 import canaryprism.discordbridge.api.misc.DiscordLocale;
+import canaryprism.discordbridge.api.server.Server;
 import canaryprism.discordbridge.api.server.permission.PermissionType;
 import canaryprism.slavacord.annotations.*;
 import canaryprism.slavacord.annotations.optionbounds.ChannelTypeBounds;
@@ -29,6 +32,9 @@ import canaryprism.slavacord.data.*;
 import canaryprism.slavacord.data.autocomplete.AutocompletableData;
 import canaryprism.slavacord.data.autocomplete.filter.AutocompleteFilter;
 import canaryprism.slavacord.data.autocomplete.filter.AutocompleteFilterData;
+import canaryprism.slavacord.data.createtarget.CreateData;
+import canaryprism.slavacord.data.createtarget.CreateGlobalData;
+import canaryprism.slavacord.data.createtarget.CreateServerData;
 import canaryprism.slavacord.data.optionbounds.*;
 import canaryprism.slavacord.exceptions.ParsingException;
 import canaryprism.slavacord.util.Reflection;
@@ -719,10 +725,11 @@ public class CommandHandler {
     @SuppressWarnings("java:S127")
     private void register(Commands target_instance, Class<? extends Commands> target, boolean overwrites) {
         logger.debug("registering commands from class {}, overwriting set to {}", target, overwrites);
-        server_id = -1;
+
+        var create_data = getCreateData(target);
 
         var new_commands = new ArrayList<SlashCommandData>();
-        parseFromClass(target_instance, target, 0, new_commands);
+        parseFromClass(target_instance, target, 0, new_commands, create_data);
 
         //yell about duplicate names
         logger.trace("checking for duplicate command names");
@@ -741,30 +748,8 @@ public class CommandHandler {
 
 
         var to_add = new ArrayList<SlashCommandData>();
-        if (server_id == 0) {
-            logger.trace("registering to global commands");
-            
-            if (!overwrites) {
-                logger.debug("getting existing global commands from discord");
-                to_add.addAll(api.getGlobalSlashCommands().join().stream().map(this::parseFromSlashCommand).toList());
-
-                var new_command_names = new_commands.stream().map(SlashCommandData::name).collect(Collectors.toSet());
-
-                // override old commands with new ones if they're the same name
-                var it = to_add.listIterator();
-                while (it.hasNext()) {
-                    var command = it.next();
-                    if (new_command_names.contains(command.name())) {
-                        it.remove();
-                        logger.info("overwriting old command {} retrieved from discord with new command", command);
-                    }
-                }
-            }
-            to_add.addAll(new_commands);
-            api.bulkUpdateGlobalCommands(to_add.stream().map(SlashCommandData::toSlashCommandBuilder).collect(Collectors.toSet())).join();
-            logger.trace("bulkOverwriteGlobalApplicationCommands finished");
-            processed_commands.addAll(new_commands);
-        } else {
+        if (create_data instanceof CreateServerData create_server_data) {
+            var server_id = create_server_data.serverID();
             var server = api.getServerById(server_id)
                     .orElseThrow(() -> new ParsingException(
                             "couldn't find server with ID " + server_id, "at class " + target.getName()));
@@ -798,6 +783,29 @@ public class CommandHandler {
                     .join();
             logger.trace("bulkOverwriteServerApplicationCommands finished");
             processed_commands.addAll(new_commands);
+        } else {
+            logger.trace("registering to global commands");
+            
+            if (!overwrites) {
+                logger.debug("getting existing global commands from discord");
+                to_add.addAll(api.getGlobalSlashCommands().join().stream().map(this::parseFromSlashCommand).toList());
+
+                var new_command_names = new_commands.stream().map(SlashCommandData::name).collect(Collectors.toSet());
+
+                // override old commands with new ones if they're the same name
+                var it = to_add.listIterator();
+                while (it.hasNext()) {
+                    var command = it.next();
+                    if (new_command_names.contains(command.name())) {
+                        it.remove();
+                        logger.info("overwriting old command {} retrieved from discord with new command", command);
+                    }
+                }
+            }
+            to_add.addAll(new_commands);
+            api.bulkUpdateGlobalCommands(to_add.stream().map(SlashCommandData::toSlashCommandBuilder).collect(Collectors.toSet())).join();
+            logger.trace("bulkOverwriteGlobalApplicationCommands finished");
+            processed_commands.addAll(new_commands);
         }
 
         synchronized (commands) {
@@ -817,7 +825,7 @@ public class CommandHandler {
             } else {
                 logger.debug("overwrite set to true, removing all older commands with the same server id from memory");
                 for (int i = 0; i < commands.size(); i++) {
-                    if (commands.get(i).server_id() == server_id) {
+                    if (commands.get(i).server_id() == ((create_data instanceof CreateServerData create_server_data) ?  create_server_data.serverID() : 0)) {
                         logger.trace("removing old command {} from memory", commands.get(i));
                         commands.remove(i--);
                     }
@@ -830,7 +838,29 @@ public class CommandHandler {
         logger.debug("registration of commands finished. added {} commands to discord from class {}", processed_commands.size(), target);
     }
 
-    private long server_id;
+    private static CreateData getCreateData(Class<? extends Commands> target) {
+
+        var create_global = target.getDeclaredAnnotation(CreateGlobal.class);
+        var create_server = target.getDeclaredAnnotation(CreateServer.class);
+        if (create_global != null && create_server != null) {
+            throw new ParsingException("you are not allowed to use both @CreateGlobal and @CreateServer", "at class " + target.getName());
+        } else if (create_global != null) {
+            return new CreateGlobalData(
+                    createEnumSet(ContextType.class, create_global.contexts()),
+                    createEnumSet(InstallationType.class, create_global.install()));
+        } else if (create_server != null) {
+            return new CreateServerData(create_server.value());
+        } else {
+            throw new ParsingException("a root Commands class requires either @CreateGlobal or @CreateServer", "at class " + target.getName());
+        }
+    }
+
+    private static <E extends Enum<E>> EnumSet<E> createEnumSet(Class<E> type, E[] elements) {
+        var set = Set.of(elements);
+        if (set.isEmpty())
+            return EnumSet.noneOf(type);
+        return EnumSet.copyOf(set);
+    }
 
     private static final MethodHandle custom_name_getter;
     static {
@@ -872,7 +902,7 @@ public class CommandHandler {
     };
 
     @SuppressWarnings({"unchecked", "java:S3011", "DuplicateExpressions"})
-    private void parseFromClass(Object instance, Class<?> target, int depth, ArrayList<? extends Data> target_list) {
+    private void parseFromClass(Object instance, Class<?> target, int depth, ArrayList<? extends Data> target_list, CreateData create_data) {
         logger.debug("parsing from class {} with instance {} at depth {}", target, instance, depth);
 
         if (depth > 2) {
@@ -883,27 +913,20 @@ public class CommandHandler {
             throw new ParsingException("you are not allowed to have an empty command group", "at class " + target.getName());
         }
 
-        var create_global = target.getDeclaredAnnotation(CreateGlobal.class);
-        var create_server = target.getDeclaredAnnotation(CreateServer.class);
-        if (create_global != null && create_server != null) {
-            throw new ParsingException("you are not allowed to use both @CreateGlobal and @CreateServer", "at class " + target.getName());
-        }
-        if (create_global != null) {
-            if (depth != 0) {
-                throw new ParsingException("you are not allowed to use @CreateGlobal on a command group", "at class " + target.getName());
-            }
+        long server_id;
+        EnumSet<ContextType> contexts;
+        EnumSet<InstallationType> install;
+        if (create_data instanceof CreateServerData create_server_data) {
+            server_id = create_server_data.serverID();
+            contexts = null;
+            install = null;
+        } else if (create_data instanceof CreateGlobalData create_global_data) {
             server_id = 0;
+            contexts = create_global_data.contexts();
+            install = create_global_data.installs();
+        } else {
+            throw new IllegalArgumentException("unexpected create_data value " + create_data);
         }
-        if (create_server != null) {
-            if (depth != 0) {
-                throw new ParsingException("you are not allowed to use @CreateServer on a command group", "at class " + target.getName());
-            }
-            server_id = create_server.value();
-        }
-        if (create_global == null && create_server == null && depth == 0) {
-            throw new ParsingException("a root Commandable requires either @CreateGlobal or @CreateServer", "at class " + target.getName());
-        }
-
 
         try {
             logger.trace("parsing through methods");
@@ -1476,10 +1499,20 @@ public class CommandHandler {
                                 Discord will interpret this as requiring PermissionType.ADMINISTRATOR
                                 """, target.getName(), method.getName());
                     }
+                    //noinspection deprecation
+                    if (!command.enabledInDMs()) {
+                        logger.warn("""
+                                enabledInDMs = false is deprecated and will be removed in a later released
+                                at {}
+                                """, method);
+                    }
+                    //noinspection deprecation
                     ((ArrayList<SlashCommandData>) target_list).add(new SlashCommandData(
                             name,
                             description,
                             localizations,
+                            contexts,
+                            install,
                             (server_id == 0) && command.enabledInDMs(),
                             command.nsfw(),
                             Optional.ofNullable(permissions).map((e) -> (e.isEmpty()) ? EnumSet.noneOf(PermissionType.class) : EnumSet.copyOf(e)).orElse(null),
@@ -1499,6 +1532,7 @@ public class CommandHandler {
                         throw new ParsingException("@RequiresPermissions is not allowed in nested commands or command groups", 
                             "in method " + target.getName() + "." + method.getName());
                     }
+                    //noinspection deprecation
                     if (!command.enabledInDMs()) {
                         throw new ParsingException("enabledInDMs = false is not allowed in nested commands or command groups",
                             "in method " + target.getName() + "." + method.getName());
@@ -1576,7 +1610,7 @@ public class CommandHandler {
 
                 logger.trace("recursively parsing from nested class");
                 
-                parseFromClass(group_instance, group, depth + 1, options);
+                parseFromClass(group_instance, group, depth + 1, options, create_data);
 
                 if (depth == 0) {
                     logger.trace("depth is 0, adding command group as a SlashCommand");
@@ -1605,6 +1639,8 @@ public class CommandHandler {
                             name,
                             description,
                             localizations,
+                            contexts,
+                            install,
                             (server_id == 0) && group_of_commands.enabledInDMs(),
                             group_of_commands.nsfw(),
                             Optional.ofNullable(permissions).map((e) -> (e.isEmpty()) ? EnumSet.noneOf(PermissionType.class) : EnumSet.copyOf(e)).orElse(null),
@@ -1906,6 +1942,7 @@ public class CommandHandler {
         return set;
     }
 
+    @SuppressWarnings("unchecked")
     private SlashCommandData parseFromSlashCommand(SlashCommand command) {
         logger.trace("parsing SlashCommand {}", command);
 
@@ -1917,7 +1954,22 @@ public class CommandHandler {
 
         var options = command.getOptions().stream().map(this::parseFromSlashCommandOption).toList();
 
-        return new SlashCommandData(name, description, localizations, enabled_in_DMs, nsfw, command.getDefaultRequiredPermissions().orElse(null), server_id, options, null, null, false, false);
+        return new SlashCommandData(
+                name,
+                description,
+                localizations,
+                command.getAllowedContexts().map((e) -> EnumSet.copyOf(((Set<ContextType>) e))).orElse(null),
+                command.getInstallationTypes().map((e) -> EnumSet.copyOf((Set<InstallationType>) e)).orElse(null),
+                enabled_in_DMs,
+                nsfw,
+                command.getDefaultRequiredPermissions().orElse(null),
+                command.getServer().map(Server::getId).orElse(0L),
+                options,
+                null,
+                null,
+                false,
+                false
+        );
     }
     @SuppressWarnings({"unchecked", "rawtypes"})
     private SlashCommandOptionData<?> parseFromSlashCommandOption(SlashCommandOption option) {

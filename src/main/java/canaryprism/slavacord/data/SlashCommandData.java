@@ -1,8 +1,11 @@
 package canaryprism.slavacord.data;
 
+import canaryprism.discordbridge.api.interaction.ContextType;
+import canaryprism.discordbridge.api.interaction.InstallationType;
 import canaryprism.discordbridge.api.server.permission.PermissionType;
 
 import java.lang.reflect.Method;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -11,6 +14,8 @@ public record SlashCommandData(
     String name,
     String description,
     LocalizationData localizations,
+    EnumSet<ContextType> contexts,
+    EnumSet<InstallationType> install,
     boolean enabled_in_DMs,
     boolean nsfw,
     Set<? extends PermissionType> required_permissions,
