@@ -1,5 +1,8 @@
 # Changelog
 
+## v7.0.3
+- fixed empty context or installation still not being handled properly
+
 ## v7.0.2
 - fixed empty context or installation not being handled properly
 
