@@ -63,6 +63,9 @@ public record AutocompleteFilterData(
             input = input.toUpperCase();
         }
 
+        if (input.isEmpty())
+            return true;
+
         if (contiguous) {
             return switch (match_start) {
                 case BEGGINING -> suggestion.startsWith(input);
