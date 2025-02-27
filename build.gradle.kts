@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "io.github.canary-prism"
-version = "7.0.4"
+version = "7.0.5"
 description = "A library addon for Discord Bridge that adds a more convenient syntax for creating slash commands."
 
 repositories {

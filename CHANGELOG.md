@@ -1,5 +1,8 @@
 # Changelog
 
+## v7.0.5
+- fixed bug where searching suggestions with an empty user input results in ArrayIndexOutOfBoundsException
+
 ## v7.0.4
 - changed behaviour of empty context or installation to be unspecified and implementation specific, this is to keep compatibility with implementations that don't support these features
 
