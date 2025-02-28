@@ -1,5 +1,9 @@
 # Changelog
 
+## v7.0.6
+- changed the log message reporting the list returned by autocompleters to be TRACE
+- upgraded discord-bridge version to 6.0.1
+
 ## v7.0.5
 - fixed bug where searching suggestions with an empty user input results in ArrayIndexOutOfBoundsException
 
