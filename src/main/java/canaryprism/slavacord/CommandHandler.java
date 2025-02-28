@@ -456,7 +456,7 @@ public class CommandHandler {
 
     @SuppressWarnings("unchecked")
     private void handleAutocompleteResult(Object returned, AutocompletableData data, SlashCommandAutocompleteInteraction interaction, Object user_input) {
-        logger.debug("handling autocomplete result: {}", returned);
+        logger.trace("handling autocomplete result: {}", returned);
         var suggestions = (List<? extends AutocompleteSuggestion<?>>) returned;
 
         if (data.filter() != null) {
