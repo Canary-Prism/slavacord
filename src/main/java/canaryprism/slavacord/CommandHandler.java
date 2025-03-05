@@ -1051,6 +1051,8 @@ public class CommandHandler {
                                                     "Invalid parameter type '" + final_actual_type.getTypeName() + "', only types supported by the Discord Bridge api or " + bridge + " can be used",
                                                     "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")"));
 
+                            logger.trace("inferred SlashCommandOptionType for {}, {}", actual_type, inference);
+
                             option_type = inference.type;
                             uses_implementation_type = inference.uses_implementation_type;
                         }
