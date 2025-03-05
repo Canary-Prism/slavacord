@@ -1075,8 +1075,8 @@ public class CommandHandler {
 
                         EnumSet<ChannelType> inferred_channel_bounds = null;
                         if (option_type == SlashCommandOptionType.CHANNEL) {
-                            inferred_channel_bounds = inferChannelTypeBounds(actual_type);
-                            logger.trace("inferred channel type bounds for parameter type {}: {}", actual_type, inferred_channel_bounds);
+                            inferred_channel_bounds = inferChannelTypeBounds(unwrapped_type);
+                            logger.trace("inferred channel type bounds for parameter type {}: {}", unwrapped_type, inferred_channel_bounds);
 
                             bounds_data = new ChannelTypeBoundsData(inferred_channel_bounds);
                         }
