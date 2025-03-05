@@ -1,5 +1,9 @@
 # Changelog
 
+## v7.0.7
+- fixed channel type bound inference not working at all
+- added log message for option type inference
+
 ## v7.0.6
 - changed the log message reporting the list returned by autocompleters to be TRACE
 - upgraded discord-bridge version to 6.0.1
