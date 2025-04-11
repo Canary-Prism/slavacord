@@ -1,5 +1,8 @@
 # Changelog
 
+## v7.0.8
+- fixed bug where non overwriting commands class registers would overwrite the autocompletable property of all slash command options in existing slash commands
+
 ## v7.0.7
 - fixed channel type bound inference not working at all
 - added log message for option type inference
