@@ -1984,6 +1984,7 @@ public class CommandHandler {
         var type = option.getType();
         var options = option.getOptions().stream().map(this::parseFromSlashCommandOption).toList();
         var choices = option.getChoices().stream().map(this::parseFromSlashCommandOptionChoice).toList();
+        var autocompletable = option.isAutocompletable();
 
         var bounds = switch (type) {
             case CHANNEL -> new ChannelTypeBoundsData(option.getChannelTypeBounds());
@@ -2002,7 +2003,7 @@ public class CommandHandler {
             default -> null;
         };
 
-        return new SlashCommandOptionData(name, description, localizations, required, type, false, options, choices, null, null, null, false, false, false, bounds);
+        return new SlashCommandOptionData(name, description, localizations, required, type, false, options, choices, (autocompletable) ? new AutocompletableData(null, null, null, null, null) : null, null, null, false, false, false, bounds);
     }
     private SlashCommandOptionChoiceData<?> parseFromSlashCommandOptionChoice(SlashCommandOptionChoice choice) {
         logger.trace("parsing SlashCommandOptionChoice {}", choice);
