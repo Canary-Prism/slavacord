@@ -1956,12 +1956,28 @@ public class CommandHandler {
 
         var options = command.getOptions().stream().map(this::parseFromSlashCommandOption).toList();
 
+        EnumSet<ContextType> contexts;
+        try {
+            contexts = command.getAllowedContexts().map((e) -> EnumSet.copyOf(((Set<ContextType>) e))).orElse(null);
+        } catch (UnsupportedOperationException e) {
+            logger.warn("couldn't retrieve allowed contexts of existing command from discord '{}', erasing to default contexts: ", command.getName(), e);
+            contexts = null;
+        }
+
+        EnumSet<InstallationType> installs;
+        try {
+            installs = command.getInstallationTypes().map((e) -> EnumSet.copyOf((Set<InstallationType>) e)).orElse(null);
+        } catch (UnsupportedOperationException e) {
+            logger.warn("couldn't retrieve installation types of existing command from discord '{}', erasing to default installation: ", command.getName(), e);
+            installs = null;
+        }
+
         return new SlashCommandData(
                 name,
                 description,
                 localizations,
-                command.getAllowedContexts().map((e) -> EnumSet.copyOf(((Set<ContextType>) e))).orElse(null),
-                command.getInstallationTypes().map((e) -> EnumSet.copyOf((Set<InstallationType>) e)).orElse(null),
+                contexts,
+                installs,
                 enabled_in_DMs,
                 nsfw,
                 command.getDefaultRequiredPermissions().orElse(null),
