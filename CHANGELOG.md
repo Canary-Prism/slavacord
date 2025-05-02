@@ -1,5 +1,8 @@
 # Changelog
 
+## v7.0.9
+- made it handle implementations that don't support contexts and print a warning instead of throwing an exception
+
 ## v7.0.8
 - fixed bug where non overwriting commands class registers would overwrite the autocompletable property of all slash command options in existing slash commands
 
