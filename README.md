@@ -413,6 +413,48 @@ enum Numbers implements CustomChoiceName {
 @Option(name = "number") Numbers number
 ```
 
+### Contexts and Installation Types
+
+for global commands, discord lets you specify where you're allowed to use a command by setting the allowed `ContextType`s and `InstallationType`s (this replaces the `enabledInDMs` property)
+
+a `ContextType` is a place where the user may use slash commands in, which includes:
+
+- `SERVER` for any server
+- `BOT_DM` for a DM with the bot itself
+- `OTHER_DM` for a DM with anyone else
+
+for example, if the only allowed context is `SERVER` for a command, a user may only use the command inside a server
+
+a `InstallationType` is the form in which this bot is accessible to the user, which includes:
+
+- `SERVER_INSTALL` for bot added to a server
+- `USER_INSTALL` for bot installed to a user (User-Installed Apps)
+
+for example, if the only allowed installation type is `USER_INSTALL` for a command, a user may only use the command 
+if they have installed the bot to their user, not if they only share a server with the bot
+
+if the only allowed installation type is `USER_INSTALL` *and* the only allowed context is `SERVER`, a user may only use the command
+if they have installed the bot to their user *and* they're currently in any server
+
+this library allows you to set allowed `ContextType`s and `InstallationType`s by specifying the arrays in `@CreateGlobal`:
+
+```java
+// anywhere...
+@CreateGlobal(contexts = { ContextType.SERVER })
+class MyCommands implements Commands {
+    @Command(name = "mewo", description = "mewo")
+    @ReturnsResponse(ephemeral = true)
+    String mewo() {
+        return "mewo";
+    }
+}
+```
+
+`/mewo` will now only be accessible if the user is currently in a server
+
+Note: if you do not specify any contexts or installations or set them to empty arrays the values they will become is 
+discord-bridge implementation dependent since not all of them support this feature yet
+
 ### Autocompletes
 
 this is probably the least intuitive part of the library,,,
