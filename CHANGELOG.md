@@ -1,5 +1,8 @@
 # Changelog
 
+## v8.0.0
+- upgraded discord-bridge version to 7.0.0
+
 ## v7.0.9
 - made it handle implementations that don't support contexts and print a warning instead of throwing an exception
 

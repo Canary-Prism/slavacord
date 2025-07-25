@@ -1,12 +1,10 @@
-import com.vanniktech.maven.publish.SonatypeHost
-
 plugins {
     `java-library`
-    id("com.vanniktech.maven.publish") version "0.30.0"
+    id("com.vanniktech.maven.publish") version "0.34.0"
 }
 
 group = "io.github.canary-prism"
-version = "7.0.9"
+version = "8.0.0"
 description = "A library addon for Discord Bridge that adds a more convenient syntax for creating slash commands."
 
 repositories {
@@ -59,7 +57,7 @@ tasks.javadoc {
 }
 
 mavenPublishing {
-    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+    publishToMavenCentral(true)
 
     signAllPublications()
 
