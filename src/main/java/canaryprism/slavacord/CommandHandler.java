@@ -286,7 +286,16 @@ public class CommandHandler {
                                         var text = opt_text.get();
 
                                         if (returns_response.ephemeral()) {
-                                            responder.setFlags(MessageFlag.EPHEMERAL);
+                                            try {
+                                                responder.setFlags(MessageFlag.EPHEMERAL);
+                                            } catch (Exception e) {
+                                                logger.debug("""
+                                                        exception while trying to set EPHEMERAL flag of a respondLater responder
+                                                        this is part of expected behaviour since not all implementations let you
+                                                        set EPHEMERAL here since it's supposed to be set as part of the
+                                                        respondLater invocation so we just ignore this exception
+                                                        """, e);
+                                            }
                                         }
                                         if (returns_response.silent()) {
                                             responder.setFlags(MessageFlag.SILENT);
