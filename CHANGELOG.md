@@ -1,5 +1,9 @@
 # Changelog
 
+## v8.0.1
+- made `@ReturnsResponse` respondLater responders tolerate throwing when attempting to set EPHEMERAL flag
+- upgraded discord-bridge version to 7.0.1
+
 ## v8.0.0
 - upgraded discord-bridge version to 7.0.0
 
