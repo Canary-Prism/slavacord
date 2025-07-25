@@ -136,7 +136,7 @@ public class CommandHandler {
         }
     }
 
-    private void findMethodAndExecute(String[] names, int index, SlashCommandInteraction interaction, SlashCommandInteractionOptionProvider interaction_options, SlashCommandData command, SlashCommandOptionData<?> option) {
+    private void findMethodAndExecute(String[] names, int index, SlashCommandInvokeInteraction interaction, SlashCommandInteractionOptionProvider interaction_options, SlashCommandData command, SlashCommandOptionData<?> option) {
 
         String looking_for = names[index];
 
@@ -592,7 +592,7 @@ public class CommandHandler {
         return Optional.of(text);
     }
 
-    private void processImmediateRespond(SlashCommandInteraction interaction, ReturnsResponse returns_response, Type return_type, Object returned) {
+    private void processImmediateRespond(SlashCommandInvokeInteraction interaction, ReturnsResponse returns_response, Type return_type, Object returned) {
 
         var opt_text = getReturnedResponse(return_type, returned);
         if (opt_text.isEmpty()) {
@@ -974,15 +974,15 @@ public class CommandHandler {
                         logger.trace("found @Interaction on first parameter");
                         skip_next_interaction_parameter = true;
                         requires_interaction = true;
-                        if (method.getParameters()[0].getType() != SlashCommandInteraction.class) {
-                            if (bridge.getImplementationType(SlashCommandInteraction.class)
+                        if (method.getParameters()[0].getType() != SlashCommandInvokeInteraction.class) {
+                            if (bridge.getImplementationType(SlashCommandInvokeInteraction.class)
                                     .map(method.getParameters()[0].getType()::equals)
                                     .orElse(false))
                                 interaction_uses_implementation_type = true;
                             else
                                 throw new ParsingException(String.format(
-                                        "@Interaction can only be applied to the first parameter with type canaryprism.discordbridge.api.interaction.slash.SlashCommandInteraction or %s",
-                                        bridge.getImplementationType(SlashCommandInteraction.class)
+                                        "@Interaction can only be applied to the first parameter with type canaryprism.discordbridge.api.interaction.slash.SlashCommandInvokeInteraction or %s",
+                                        bridge.getImplementationType(SlashCommandInvokeInteraction.class)
                                                 .map(Class::getName)
                                                 .orElse("<not found>")),
                                         "with parameter " + target.getName() + "." + method.getName() + "(" + method.getParameters()[0].getType().getSimpleName() + " " + method.getParameters()[0].getName() + ")");
@@ -1004,8 +1004,8 @@ public class CommandHandler {
                                 continue;
                             }
                             throw new ParsingException(String.format(
-                                    "@Interaction can only be applied to the first parameter with type canaryprism.discordbridge.api.interaction.slash.SlashCommandInteraction or %s",
-                                    bridge.getImplementationType(SlashCommandInteraction.class)
+                                    "@Interaction can only be applied to the first parameter with type canaryprism.discordbridge.api.interaction.slash.SlashCommandInvokeInteraction or %s",
+                                    bridge.getImplementationType(SlashCommandInvokeInteraction.class)
                                             .map(Class::getName)
                                             .orElse("<not found>")),
                                     "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
