@@ -7,7 +7,7 @@ slf4j = "2.0.16"
 javacord = "3.8.0"
 discord-bridge = "6.0.4"
 
-apache-commons-lang = "3.17.0"
+apache-commons-lang = "3.18.0"
 
 jetbrains-annotations = "24.0.0"
 
