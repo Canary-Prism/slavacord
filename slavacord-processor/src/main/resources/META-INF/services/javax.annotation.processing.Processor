@@ -1,0 +1,6 @@
+canaryprism.slavacord.annotations.processor.CreateAnnotationProcessor
+canaryprism.slavacord.annotations.processor.CommandAnnotationProcessor
+canaryprism.slavacord.annotations.processor.AsyncAnnotationProcessor
+canaryprism.slavacord.annotations.processor.ReturnsResponseAnnotationProcessor
+canaryprism.slavacord.annotations.processor.OptionAnnotationProcessor
+canaryprism.slavacord.annotations.processor.AutocompletesAnnotationProcessor
