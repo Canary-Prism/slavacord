@@ -148,7 +148,7 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
 
             if (((Object) parameter.getAnnotationMirrors()
                     .stream()
-                    .filter((mirror) -> mirror.getAnnotationType().equals(elements.getTypeElement(Autocompletes.class.getName()).asType()))
+                    .filter((mirror) -> mirror.getAnnotationType().equals(getTypeMirror(Autocompletes.class)))
                     .findAny()
                     .orElse(null)) instanceof AnnotationMirror autocompletes_mirror) {
                 if (has_choices)
@@ -160,7 +160,7 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
                                     .formatted(Autocompletes.class.getSimpleName(), type),
                             parameter, autocompletes_mirror);
             }
-        } else if (types.isAssignable(parameter.asType(), types.erasure(elements.getTypeElement(Enum.class.getName()).asType()))) {
+        } else if (types.isAssignable(parameter.asType(), types.erasure(getTypeMirror(Enum.class)))) {
 
             message(Diagnostic.Kind.NOTE, "inferred type is enum", parameter);
             // checks for enums :3
@@ -174,7 +174,7 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
 
             if (((Object) parameter.getAnnotationMirrors()
                     .stream()
-                    .filter((mirror) -> mirror.getAnnotationType().equals(elements.getTypeElement(Autocompletes.class.getName()).asType()))
+                    .filter((mirror) -> mirror.getAnnotationType().equals(getTypeMirror(Autocompletes.class)))
                     .findAny()
                     .orElse(null)) instanceof AnnotationMirror autocompletes_mirror) {
                 message(Diagnostic.Kind.ERROR, "@%s may not be used with enum options"
@@ -210,7 +210,7 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
     private Optional<SlashCommandOptionType> inferDiscordBridgeType(Set<? extends SlashCommandOptionType> types, TypeMirror type) {
         var compatible = types.stream()
                 .filter((e) -> this.types.isAssignable(type,
-                        elements.getTypeElement(e.getTypeRepresentation().getName()).asType()))
+                        getTypeMirror(e.getTypeRepresentation())))
                 .collect(Collectors.toSet());
 
         return (Optional<SlashCommandOptionType>) compatible.stream()
@@ -226,7 +226,7 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
     private Optional<SlashCommandOptionType> inferImplementationType(DiscordBridge bridge, Set<? extends SlashCommandOptionType> types, TypeMirror type) {
         var compatible = types.stream()
                 .filter((e) -> this.types.isAssignable(type,
-                        elements.getTypeElement(e.getInternalTypeRepresentation(bridge).getTypeName()).asType()))
+                        getTypeMirror(e.getInternalTypeRepresentation(bridge))))
                 .collect(Collectors.toSet());
 
         return (Optional<SlashCommandOptionType>) compatible.stream()

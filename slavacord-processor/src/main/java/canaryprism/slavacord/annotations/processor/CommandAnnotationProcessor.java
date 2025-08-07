@@ -91,7 +91,7 @@ public final class CommandAnnotationProcessor extends AbstractProcessor {
                 if (!name_set.add(option.name())) {
                     var option_mirror = e.getAnnotationMirrors()
                             .stream()
-                            .filter((mirror) -> mirror.getAnnotationType().equals(elements.getTypeElement(Option.class.getName()).asType()))
+                            .filter((mirror) -> mirror.getAnnotationType().equals(getTypeMirror(Option.class)))
                             .findAny()
                             .orElseThrow();
                     var option_name_value = ((ExecutableElement) option_mirror.getAnnotationType()
@@ -112,7 +112,7 @@ public final class CommandAnnotationProcessor extends AbstractProcessor {
 
         if (executable.getEnclosingElement() instanceof TypeElement type
                 && type.getAnnotation(CommandGroup.class) == null
-                && !type.getInterfaces().contains(elements.getTypeElement(Commands.class.getName()).asType())) {
+                && !type.getInterfaces().contains(getTypeMirror(Commands.class))) {
             message(Diagnostic.Kind.ERROR,
                     "method with @%s not nested in %s class or command group"
                             .formatted(Command.class.getSimpleName(), Commands.class.getSimpleName())

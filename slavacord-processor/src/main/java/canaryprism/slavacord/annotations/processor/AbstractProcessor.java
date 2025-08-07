@@ -70,6 +70,37 @@ public abstract class AbstractProcessor extends javax.annotation.processing.Abst
         return true;
     }
 
+    protected TypeMirror getTypeMirror(Type type) {
+        if (type instanceof Class<?> clazz) {
+            return types.getDeclaredType(elements.getTypeElement(clazz.getName()));
+        } else if (type instanceof ParameterizedType parameterized) {
+            DeclaredType containing = null;
+            if (((Object) parameterized.getOwnerType()) instanceof Type owner) {
+                containing = ((DeclaredType) getTypeMirror(owner));
+            }
+            return types.getDeclaredType(containing,
+                    ((TypeElement) types.asElement(getTypeMirror(parameterized.getRawType()))),
+                    Arrays.stream(parameterized.getActualTypeArguments())
+                            .map(this::getTypeMirror)
+                            .toArray(TypeMirror[]::new));
+        } else if (type instanceof WildcardType wildcard) {
+            return types.getWildcardType(
+                    getFirst(wildcard.getUpperBounds()).map(this::getTypeMirror).orElse(null),
+                    getFirst(wildcard.getLowerBounds()).map(this::getTypeMirror).orElse(null)
+            );
+        } else if (type instanceof GenericArrayType generic_array) {
+            return types.getArrayType(getTypeMirror(generic_array.getGenericComponentType()));
+        }
+        return null;
+    }
+
+    private <T> Optional<T> getFirst(T[] array) {
+        if (array.length < 1)
+            return Optional.empty();
+        else
+            return Optional.ofNullable(array[0]);
+    }
+
     protected abstract void process(TypeElement annotation, Element element, AnnotationMirror annotation_mirror);
 
     protected void message(Diagnostic.Kind kind, String message, Element element) {
