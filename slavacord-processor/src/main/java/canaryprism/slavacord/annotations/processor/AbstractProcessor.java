@@ -64,7 +64,7 @@ public abstract class AbstractProcessor extends javax.annotation.processing.Abst
                         .orElseThrow();
                 try {
                     process(annotation, e, annotation_mirror);
-                } catch (NoSuchElementException n) {
+                } catch (Exception n) {
                     var writer = new StringWriter();
                     n.printStackTrace(new PrintWriter(writer));
                     message(Diagnostic.Kind.ERROR, writer.toString(), e);
