@@ -13,5 +13,6 @@ module canaryprism.slavacord.processor {
             AsyncAnnotationProcessor,
             ReturnsResponseAnnotationProcessor,
             OptionAnnotationProcessor,
-            AutocompletesAnnotationProcessor;
+            AutocompletesAnnotationProcessor,
+            AutocompleterAnnotationProcessor;
 }
