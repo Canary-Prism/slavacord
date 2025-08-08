@@ -336,12 +336,15 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
         var parameters = new HashSet<AutocompleterParameter>();
 
         for (var parameter : executable.getParameters()) {
-            if (type.equals(parameter.asType()))
+            if (type.equals(parameter.asType())) {
                 if (!parameters.add(AutocompleterParameter.VALUE))
                     return false;
-            if (autocomplete_interaction_types.contains(parameter.asType()))
+            } else if (autocomplete_interaction_types.contains(parameter.asType())) {
                 if (!parameters.add(AutocompleterParameter.INTERACTION))
                     return false;
+            } else {
+                return false;
+            }
         }
 
         return true;
