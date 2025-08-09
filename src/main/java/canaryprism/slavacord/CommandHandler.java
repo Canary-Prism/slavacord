@@ -1211,11 +1211,11 @@ public class CommandHandler {
                         var autocomplete = parameter.getDeclaredAnnotation(Autocompletes.class);
                         if (autocomplete != null) {
                             logger.trace("found @Autocompletes on parameter");
-                            if (actual_type != String.class && actual_type != Long.class && actual_type != long.class)
-                                throw new ParsingException("Autocomplete can only be applied to String or long", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                            if (!option_type.canBeChoices())
+                                throw new ParsingException("Autocomplete can only be applied to String long or double", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
                             var actual_class = (Class<?>)actual_type;
 
-                            if (option_string_choices.length > 0 || option_long_choices.length > 0)
+                            if (option_string_choices.length > 0 || option_long_choices.length > 0 || option_double_choices.length > 0)
                                 throw new ParsingException("Autocomplete cannot be used with choices", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
                             try {
                                 var supplier_class = autocomplete.autocompleterClass();
