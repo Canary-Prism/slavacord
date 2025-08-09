@@ -19,7 +19,7 @@ import java.util.stream.Stream;
 
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @SupportedAnnotationTypes({
-        "canaryprism.slavacord.annotations.Autocompletes",
+        "canaryprism.slavacord.autocomplete.annotations.Autocompletes",
 })
 public final class AutocompletesAnnotationProcessor extends AbstractProcessor {
     @SuppressWarnings("ConstantValue")
