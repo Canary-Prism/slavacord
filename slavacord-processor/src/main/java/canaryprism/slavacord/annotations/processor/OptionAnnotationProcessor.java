@@ -4,6 +4,7 @@ import canaryprism.discordbridge.api.DiscordBridge;
 import canaryprism.discordbridge.api.data.interaction.slash.SlashCommandData;
 import canaryprism.discordbridge.api.data.interaction.slash.SlashCommandOptionData;
 import canaryprism.discordbridge.api.interaction.slash.SlashCommandOptionType;
+import canaryprism.slavacord.annotations.Command;
 import canaryprism.slavacord.annotations.Option;
 import canaryprism.slavacord.autocomplete.annotations.Autocompletes;
 
@@ -28,6 +29,11 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
             message(Diagnostic.Kind.ERROR, "@%s may only be applied to method parameters".formatted(Option.class.getSimpleName()),
                     element, annotation_mirror);
             return;
+        }
+
+        if (parameter.getEnclosingElement() instanceof ExecutableElement executable && executable.getAnnotation(Command.class) != null) {
+            message(Diagnostic.Kind.ERROR, "method with @%s parameters must have @%s"
+                    .formatted(Option.class.getSimpleName(), Command.class), executable);
         }
 
         var optional_type = bridge((bridge) -> inferType(bridge, parameter.asType()))
