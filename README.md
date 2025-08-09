@@ -459,7 +459,7 @@ discord-bridge implementation dependent since not all of them support this featu
 
 this is probably the least intuitive part of the library,,,
 
-in Discord a `String` or `long` SlashCommandOption may be marked `@Autocompletable` which means that when the user starts typing in the option discord will send an event to your bot telling it what their current input is and you can respond by suggesting SlashCommandOptionChoices that the user may choose from
+in Discord a `String` `long` or `double` SlashCommandOption may be marked `@Autocompletable` which means that when the user starts typing in the option discord will send an event to your bot telling it what their current input is and you can respond by suggesting SlashCommandOptionChoices that the user may choose from
 
 **NOTE: unlike [Static Option Choices](#option-choices) these choices are NOT FORCED. the user is still free to enter any arbitrary value they like**
 
