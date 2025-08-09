@@ -30,8 +30,6 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
             return;
         }
 
-        this.element = parameter;
-
         var optional_type = bridge((bridge) -> inferType(bridge, parameter.asType()))
                 .stream()
                 .flatMap(Optional::stream)
@@ -205,7 +203,6 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
                 .or(() -> inferImplementationType(bridge, types, final_type));
     }
 
-    Element element;
     @SuppressWarnings("unchecked")
     private Optional<SlashCommandOptionType> inferDiscordBridgeType(Set<? extends SlashCommandOptionType> types, TypeMirror type) {
         var compatible = types.stream()
