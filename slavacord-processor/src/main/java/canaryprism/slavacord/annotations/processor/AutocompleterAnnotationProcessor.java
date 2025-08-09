@@ -9,7 +9,7 @@ import javax.lang.model.element.TypeElement;
 
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @SupportedAnnotationTypes({
-        "canaryprism.slavacord.annotations.Autocompleter",
+        "canaryprism.slavacord.autocomplete.annotations.Autocompleter",
 })
 public final class AutocompleterAnnotationProcessor extends AbstractProcessor {
     @Override
