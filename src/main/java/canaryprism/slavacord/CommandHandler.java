@@ -1003,486 +1003,7 @@ public class CommandHandler {
 
                 ArrayList<SlashCommandOptionData<?>> options = new ArrayList<>();
                 try {
-                    logger.trace("parsing through parameters");
-                    for (var parameter : method.getParameters()) {
-                        logger.trace("parsing parameter {}", parameter);
-                        if (parameter.getAnnotation(Interaction.class) != null) {
-                            if (skip_next_interaction_parameter) {
-                                logger.trace("skipping @Interaction parameter");
-                                skip_next_interaction_parameter = false;
-                                continue;
-                            }
-                            throw new ParsingException(String.format(
-                                    "@Interaction can only be applied to the first parameter with type canaryprism.discordbridge.api.interaction.slash.SlashCommandInvokeInteraction or %s",
-                                    bridge.getImplementationType(SlashCommandInvokeInteraction.class)
-                                            .map(Class::getName)
-                                            .orElse("<not found>")),
-                                    "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-
-                        }
-
-                        var option = parameter.getDeclaredAnnotation(Option.class);
-                        if (option == null) 
-                            throw new ParsingException("All parameters must have either @Interaction or @Option", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-
-                        logger.trace("found @Option on parameter");
-
-
-                        var parameter_type = parameter.getParameterizedType();
-                        var unwrapped_type = parameter_type;
-                        if (parameter_type instanceof ParameterizedType pt && pt.getRawType().equals(Optional.class)) {
-                            unwrapped_type = pt.getActualTypeArguments()[0];
-                            logger.trace("parameter type {} is Optional, unwrapped to {}", parameter_type, unwrapped_type);
-                        }
-
-                        var actual_type = unwrapped_type;
-                        if (TypeUtils.isAssignable(actual_type, ServerChannel.class)) {
-                            actual_type = ServerChannel.class;
-                            logger.trace("parameter type {} is subtype of ServerChannel, simplifying to ServerChannel for option type parsing", unwrapped_type);
-                        }
-                        if (TypeUtils.isAssignable(actual_type, bridge.getImplementationType(ServerChannel.class).orElse(null))) {
-                            actual_type = bridge.getImplementationType(ServerChannel.class).orElseThrow();
-                            logger.trace("parameter type {} is subtype of internal equivalent of ServerChannel, simplifying to internal equivalent '{}' for option type parsing", unwrapped_type, actual_type);
-                        }
-
-                        var is_enum = actual_type instanceof Class<?> c && c.isEnum();
-
-                        SlashCommandOptionType option_type;
-                        boolean uses_implementation_type;
-                        if (is_enum) {
-                            option_type = SlashCommandOptionType.INTEGER;
-                            uses_implementation_type = false;
-                        } else {
-                            var final_actual_type = actual_type;
-                            var inference = inferType(actual_type)
-                                    .orElseThrow(() ->
-                                            new ParsingException(
-                                                    "Invalid parameter type '" + final_actual_type.getTypeName() + "', only types supported by the Discord Bridge api or " + bridge + " can be used",
-                                                    "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")"));
-
-                            logger.trace("inferred SlashCommandOptionType for {}, {}", actual_type, inference);
-
-                            option_type = inference.type;
-                            uses_implementation_type = inference.uses_implementation_type;
-                        }
-
-                        var option_name = option.name();
-                        var option_description = option.description();
-
-                        if (option_description.isEmpty()) {
-                            logger.trace("description is blank, using name '{}' as description", option_name);
-                            option_description = option_name;
-                        }
-
-                        var option_localizations = parseLocalizationData(parameter.getDeclaredAnnotationsByType(Trans.class),
-                                "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-
-                        var option_required = !(parameter_type instanceof ParameterizedType pt && pt.getRawType().equals(Optional.class));
-                        var option_string_choices = option.stringChoices();
-                        var option_long_choices = option.longChoices();
-                        var option_double_choices = option.doubleChoices();
-
-                        OptionBoundsData bounds_data = null;
-
-                        EnumSet<ChannelType> inferred_channel_bounds = null;
-                        if (option_type == SlashCommandOptionType.CHANNEL) {
-                            inferred_channel_bounds = inferChannelTypeBounds(unwrapped_type);
-                            logger.trace("inferred channel type bounds for parameter type {}: {}", unwrapped_type, inferred_channel_bounds);
-
-                            bounds_data = new ChannelTypeBoundsData(inferred_channel_bounds);
-                        }
-
-                        var channel_type_bounds = parameter.getDeclaredAnnotation(ChannelTypeBounds.class);
-                        if (channel_type_bounds != null) {
-                            logger.trace("found @ChannelTypeBounds on parameter");
-                            if (option_type != SlashCommandOptionType.CHANNEL) {
-                                throw new ParsingException("ChannelTypeBounds can only be applied to Channel parameters", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            }
-
-                            var channel_types_arr = channel_type_bounds.value();
-                            var channel_types = EnumSet.noneOf(ChannelType.class);
-                            for (var type : channel_types_arr) {
-                                var success = channel_types.add(type);
-                                if (!success) {
-                                    logger.warn("""
-                                            Duplicate Channel bound types found {} with parameter {}.{}({} {}) !!
-                                            ignoring duplicate
-                                            """, type, target.getName(), method.getName(), parameter.getType().getSimpleName(), parameter.getName());
-                                }
-                            }
-
-                            if (!inferred_channel_bounds.containsAll(channel_types)) {
-                                throw new ParsingException("@ChannelTypeBounds allows channel types that aren't assignable to the parameter type " + actual_type, "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            }
-
-                            if (channel_types.isEmpty()) {
-                                throw new ParsingException("empty ChannelTypeBounds not allowed", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            }
-
-                            bounds_data = new ChannelTypeBoundsData(channel_types);
-                        }
-
-                        var double_bounds = parameter.getDeclaredAnnotation(DoubleBounds.class);
-                        if (double_bounds != null) {
-                            logger.trace("found @DoubleBounds on parameter");
-                            if (option_type != SlashCommandOptionType.NUMBER) {
-                                throw new ParsingException("@DoubleBounds can only be applied to double parameters", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            }
-
-                            var min = double_bounds.min();
-                            var max = double_bounds.max();
-
-                            if (min > max) {
-                                throw new ParsingException("DoubleBounds min must be less than or equal to max", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            }
-
-                            if ((min == BOUNDS_MIN || min == Double.NEGATIVE_INFINITY)
-                                && (max == BOUNDS_MAX || max == Double.POSITIVE_INFINITY)) {
-                                logger.warn("""
-                                        DoubleBounds has no effect
-                                            with parameter {}.{}({} {})
-                                        """, target.getName(), method.getName(), parameter_type, parameter.getName());
-                            } else if (min != Double.NEGATIVE_INFINITY && min < BOUNDS_MIN) {
-                                throw new ParsingException("DoubleBounds min must not be smaller than -2^53", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            } else if (max != Double.POSITIVE_INFINITY && max > BOUNDS_MAX) {
-                                throw new ParsingException("DoubleBounds max must not be greater than 2^53", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            }
-
-                            bounds_data = new DoubleBoundsData(min, max);
-                        }
-
-                        var long_bounds = parameter.getDeclaredAnnotation(LongBounds.class);
-                        if (long_bounds != null) {
-                            logger.trace("found @LongBounds on parameter");
-                            if (option_type != SlashCommandOptionType.INTEGER) {
-                                throw new ParsingException("@LongBounds can only be applied to long parameters", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            }
-
-                            var min = long_bounds.min();
-                            var max = long_bounds.max();
-
-                            if (min > max) {
-                                throw new ParsingException("LongBounds min must be less than or equal to max", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            }
-
-                            if ((min == BOUNDS_MIN || min == Long.MIN_VALUE)
-                                && (max == BOUNDS_MAX || max == Long.MAX_VALUE)) {
-                                logger.warn("""
-                                        LongBounds has no effect
-                                            with parameter {}.{}({} {})
-                                        """, target.getName(), method.getName(), parameter_type, parameter.getName());
-                            } else if (min != Long.MIN_VALUE && min < BOUNDS_MIN) {
-                                throw new ParsingException("LongBounds min must not be smaller than -2^53", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            } else if (max != Long.MAX_VALUE && max > BOUNDS_MAX) {
-                                throw new ParsingException("LongBounds max must not be greater than 2^53", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            }
-
-                            bounds_data = new LongBoundsData(min, max);
-                        }
-
-                        var string_length_bounds = parameter.getDeclaredAnnotation(StringLengthBounds.class);
-                        if (string_length_bounds != null) {
-                            logger.trace("found @StringLengthBounds on parameter");
-                            if (option_type != SlashCommandOptionType.STRING) {
-                                throw new ParsingException("@StringLengthBounds can only be applied to String parameters", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            }
-
-                            var min = string_length_bounds.min();
-                            var max = string_length_bounds.max();
-
-                            if (min > max) {
-                                throw new ParsingException("StringLengthBounds min must be less than or equal to max", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            }
-
-                            if (min < 0) {
-                                throw new ParsingException("StringLengthBounds min must not be negative", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            }
-
-                            if (min == 0 && max == Long.MAX_VALUE) {
-                                logger.warn("""
-                                        StringLengthBounds has no effect
-                                            with parameter {}.{}({} {})
-                                        """, target.getName(), method.getName(), parameter_type, parameter.getName());
-                            }
-
-                            bounds_data = new StringLengthBoundsData(min, max);
-                        }
-
-                        var autocomplete = parameter.getDeclaredAnnotation(Autocompletes.class);
-                        if (autocomplete != null) {
-                            logger.trace("found @Autocompletes on parameter");
-                            if (!option_type.canBeChoices())
-                                throw new ParsingException("Autocomplete can only be applied to String long or double", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            var actual_class = (Class<?>)actual_type;
-
-                            if (option_string_choices.length > 0 || option_long_choices.length > 0 || option_double_choices.length > 0)
-                                throw new ParsingException("Autocomplete cannot be used with choices", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            try {
-                                var supplier_class = autocomplete.autocompleterClass();
-                                if (supplier_class == Void.class) {
-                                    supplier_class = target;
-                                }
-                                var supplier_class_is_target = (supplier_class == target);
-                                var supplier_method_name = autocomplete.autocompleter();
-
-                                try {
-                                    logger.debug("attempting to resolve autocomplete supplier method for parameter {}.{}({} {})", target.getName(), method.getName(), parameter_type, parameter.getName());
-
-                                    var autocompleter = obtainAutocompleterMethod(supplier_class, supplier_method_name, actual_class);
-
-                                    var supplier_method = autocompleter.method();
-                                    var params = autocompleter.param();
-
-                                    validateAutocompleteSupplierMethod(supplier_method, actual_class);
-
-                                    var final_actual_type = actual_type;
-                                    var type = inferType(actual_class)
-                                            .map(TypeInference::type) // ignore the internal type bc choices don't use any types that have an internal variant
-                                            .filter((e) -> e.can_be_choices)
-                                            .orElseThrow(() -> new ParsingException(
-                                                    "Invalid parameter type '" + final_actual_type.getTypeName() + "', only autocompletable types supported by the Discord Bridge api or " + bridge + " can be used",
-                                                    "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")"));
-
-                                    AutocompleteFilter filter = null;
-
-                                    var search_suggestions = supplier_method.getDeclaredAnnotation(SearchSuggestions.class);
-                                    if (search_suggestions != null) {
-                                        logger.trace("found SearchSuggestions in autocompleter method");
-
-                                        filter = new AutocompleteFilterData(
-                                            search_suggestions.at(),
-                                            search_suggestions.containedIn(),
-                                            search_suggestions.ignoreCase(),
-                                            search_suggestions.ignoreWhitespace(),
-                                            search_suggestions.ignorePunctuation(),
-                                            search_suggestions.pruneToLimit(),
-                                            search_suggestions.removeDuplicates(),
-                                            search_suggestions.contiguous()
-                                        );
-                                    }
-
-                                    AutocompletableData data;
-                                    if (supplier_class_is_target) {
-                                        logger.trace("autocompleter method is in the same class as the command method, nonstatic methods are allowed");
-                                        if (Modifier.isStatic(supplier_method.getModifiers())) {
-                                            data = new AutocompletableData(supplier_method, null, type, params, filter);
-                                        } else {
-                                            data = new AutocompletableData(supplier_method, instance, type, params, filter);
-                                        }
-                                    } else {
-                                        logger.trace("autocompleter method is not in the same class as the command method, autocompleter method must be static");
-                                        if (!Modifier.isStatic(supplier_method.getModifiers())) {
-                                            throw new ParsingException("Autocomplete supplier method must be static if not in the same class", "in method " + supplier_class.getName() + "." + supplier_method_name + "(" + actual_class.getSimpleName() + ")");
-                                        }
-                                        data = new AutocompletableData(supplier_method, null, type, params, filter);
-                                    }
-
-                                    supplier_method.setAccessible(true);
-
-                                    options.add(new SlashCommandOptionData<String>(
-                                        option_name,
-                                        option_description,
-                                        option_localizations,
-                                        option_required,
-                                        option_type,
-                                        uses_implementation_type,
-                                        null,
-                                        null,
-                                        data,
-                                        null,
-                                        null,
-                                        false,
-                                        false,
-                                        false,
-                                        bounds_data
-                                    ));
-
-
-                                } catch (NoSuchMethodException | SecurityException e) {
-                                    throw new ParsingException("Autocompleter method not found, an Autocompleter method can only take the parameters (" + actual_class.getSimpleName() + ") or (AutocompleteInteraction, " + actual_class.getSimpleName() + ")", "at class " + supplier_class.getName(), e);
-                                } catch (ParsingException e) {
-                                    throw e.addParseTrace("at class " + supplier_class.getName());
-                                }
-                            } catch (ParsingException e) {
-                                throw e.addParseTrace("with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            }
-                        } else if (option_string_choices.length > 0) {
-                            logger.trace("found string choices on parameter");
-                            var optionchoices = new ArrayList<SlashCommandOptionChoiceData<String>>();
-                            if (option_type != SlashCommandOptionType.STRING) {
-                                throw new ParsingException("Option Choices type does not match parameter", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            }
-                            if (bounds_data != null) {
-                                throw new ParsingException("Option Choices cannot be used when bounds are present", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            }
-                            for (var choice : option_string_choices) {
-                                optionchoices.add(new SlashCommandOptionChoiceData<String>(
-                                    choice.name().isEmpty()? choice.value() : choice.name(),
-                                    choice.value(),
-                                    parseOptionChoiceTranslations(choice.translations(), "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")")
-                                ));
-                            }
-                            options.add(new SlashCommandOptionData<String>(
-                                option_name, 
-                                option_description, 
-                                option_localizations,
-                                option_required,
-                                option_type,
-                                uses_implementation_type,
-                                null, 
-                                optionchoices, 
-                                null,
-                                null,
-                                null,
-                                false,
-                                false,
-                                false,
-                                null
-                            ));
-
-                        } else if (option_long_choices.length > 0) {
-                            logger.trace("found long choices on parameter");
-                            var optionchoices = new ArrayList<SlashCommandOptionChoiceData<Long>>();
-                            if (option_type != SlashCommandOptionType.INTEGER) {
-                                throw new ParsingException("Invalid option choice type at parameter " + parameter.getName() + " in method " + method.getName(), "at class " + target.getName());
-                            }
-                            if (bounds_data != null) {
-                                throw new ParsingException("Option Choices cannot be used when bounds are present", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            }
-                            for (var choice : option_long_choices) {
-                                optionchoices.add(new SlashCommandOptionChoiceData<Long>(
-                                    choice.name(),
-                                    choice.value(),
-                                    parseOptionChoiceTranslations(choice.translations(), "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")")
-                                ));
-                            }
-                            options.add(new SlashCommandOptionData<Long>(
-                                option_name, 
-                                option_description, 
-                                option_localizations,
-                                option_required,
-                                option_type,
-                                uses_implementation_type,
-                                null, 
-                                optionchoices, 
-                                null,
-                                null,
-                                null,
-                                false,
-                                false,
-                                false,
-                                null
-                            ));
-
-                        } else if (option_double_choices.length > 0) {
-                            logger.trace("found double choices on parameter");
-                            var optionchoices = new ArrayList<SlashCommandOptionChoiceData<Double>>();
-                            if (option_type != SlashCommandOptionType.NUMBER) {
-                                throw new ParsingException("Invalid option choice type at parameter " + parameter.getName() + " in method " + method.getName(), "at class " + target.getName());
-                            }
-                            if (bounds_data != null) {
-                                throw new ParsingException("Option Choices cannot be used when bounds are present", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            }
-                            for (var choice : option_double_choices) {
-                                optionchoices.add(new SlashCommandOptionChoiceData<Double>(
-                                        choice.name(),
-                                        choice.value(),
-                                        parseOptionChoiceTranslations(choice.translations(), "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")")
-                                ));
-                            }
-                            options.add(new SlashCommandOptionData<Double>(
-                                    option_name,
-                                    option_description,
-                                    option_localizations,
-                                    option_required,
-                                    option_type,
-                                    uses_implementation_type,
-                                    null,
-                                    optionchoices,
-                                    null,
-                                    null,
-                                    null,
-                                    false,
-                                    false,
-                                    false,
-                                    null
-                            ));
-
-                        } else if (is_enum) {
-                            logger.trace("parameter type is enum");
-                            var inner_class = (Class<?>)actual_type;
-                            var optionchoices = new ArrayList<SlashCommandOptionChoiceData<Enum<?>>>();
-                            if (option_type != SlashCommandOptionType.INTEGER) {
-                                throw new ParsingException("Invalid option choice type at parameter " + parameter.getName() + " in method " + method.getName(), "at class " + target.getName());
-                            }
-                            if (long_bounds != null) {
-                                throw new ParsingException("Option Choices cannot be used when bounds are present", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
-                            }
-                            if (CustomChoiceName.class.isAssignableFrom(inner_class)) {
-                                logger.trace("enum class implements CustomChoiceName");
-                                for (var choice : inner_class.getEnumConstants()) {
-                                    logger.trace("adding option choice {}", choice);
-                                    try {
-                                        var choicename = custom_name_getter.invoke(choice).toString();
-                                        logger.trace("returned custom name is {}", choicename);
-                                        if (choicename.isBlank()) {
-                                            throw new ParsingException("CustomChoiceName.getCustomName() must return a non-blank string", "at class " + target.getName());
-                                        }
-                                        if (choicename.length() > 25) {
-                                            throw new ParsingException("CustomChoiceName.getCustomName() must return a string with a length of 25 characters or less", "at class " + target.getName());
-                                        }
-                                        var choice_localizations = Map.copyOf((Map<DiscordLocale, String>)custom_name_translations_getter.invoke(choice));
-                                        optionchoices.add(new SlashCommandOptionChoiceData<Enum<?>>(choicename, ((Enum<?>)choice), choice_localizations));
-                                    } catch (Throwable e) {
-                                        throw new ParsingException("Exception while trying to get custom name", "at class " + target.getName(), e);
-                                    }
-                                }
-                            } else {
-                                logger.trace("enum class does not implement CustomChoiceName");
-                                for (var choice : inner_class.getEnumConstants()) {
-                                    logger.trace("adding option choice {}", choice);
-                                    optionchoices.add(new SlashCommandOptionChoiceData<Enum<?>>(choice.toString().replaceAll("(?<=.{25}).", ""), ((Enum<?>)choice), Map.of()));
-                                }
-                            }
-                            options.add(new SlashCommandOptionData<Enum<?>>(
-                                option_name, 
-                                option_description, 
-                                option_localizations,
-                                option_required,
-                                option_type,
-                                uses_implementation_type,
-                                null, 
-                                optionchoices, 
-                                null,
-                                null,
-                                null,
-                                false,
-                                false,
-                                true,
-                                null
-                            ));
-
-                        } else {
-                            logger.trace("parameter is a simple option");
-                            options.add(new SlashCommandOptionData<Long>(
-                                option_name, 
-                                option_description, 
-                                option_localizations,
-                                option_required,
-                                option_type,
-                                uses_implementation_type,
-                                null,
-                                null,
-                                null, 
-                                null,
-                                null,
-                                false,
-                                false,
-                                false,
-                                bounds_data
-                            ));
-                        }
-                    }
+                    parseCommandMethodParameters(instance, target, method, skip_next_interaction_parameter, options);
                 } catch (ParsingException e) {
                     throw e.addParseTrace("in method " + target.getName() + "." + method.getName());
                 }
@@ -1697,6 +1218,493 @@ public class CommandHandler {
             }
         } catch (ParsingException e) {
             throw e.addParseTrace("at class " + target.getName());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void parseCommandMethodParameters(Object instance, Class<?> target, Method method, boolean skip_next_interaction_parameter, ArrayList<SlashCommandOptionData<?>> options) {
+        logger.trace("parsing through parameters");
+        for (var parameter : method.getParameters()) {
+            logger.trace("parsing parameter {}", parameter);
+            if (parameter.getAnnotation(Interaction.class) != null) {
+                if (skip_next_interaction_parameter) {
+                    logger.trace("skipping @Interaction parameter");
+                    skip_next_interaction_parameter = false;
+                    continue;
+                }
+                throw new ParsingException(String.format(
+                        "@Interaction can only be applied to the first parameter with type canaryprism.discordbridge.api.interaction.slash.SlashCommandInvokeInteraction or %s",
+                        bridge.getImplementationType(SlashCommandInvokeInteraction.class)
+                                .map(Class::getName)
+                                .orElse("<not found>")),
+                        "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+
+            }
+
+            var option = parameter.getDeclaredAnnotation(Option.class);
+            if (option == null)
+                throw new ParsingException("All parameters must have either @Interaction or @Option", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+
+            logger.trace("found @Option on parameter");
+
+
+            var parameter_type = parameter.getParameterizedType();
+            var unwrapped_type = parameter_type;
+            if (parameter_type instanceof ParameterizedType pt && pt.getRawType().equals(Optional.class)) {
+                unwrapped_type = pt.getActualTypeArguments()[0];
+                logger.trace("parameter type {} is Optional, unwrapped to {}", parameter_type, unwrapped_type);
+            }
+
+            var actual_type = unwrapped_type;
+            if (TypeUtils.isAssignable(actual_type, ServerChannel.class)) {
+                actual_type = ServerChannel.class;
+                logger.trace("parameter type {} is subtype of ServerChannel, simplifying to ServerChannel for option type parsing", unwrapped_type);
+            }
+            if (TypeUtils.isAssignable(actual_type, bridge.getImplementationType(ServerChannel.class).orElse(null))) {
+                actual_type = bridge.getImplementationType(ServerChannel.class).orElseThrow();
+                logger.trace("parameter type {} is subtype of internal equivalent of ServerChannel, simplifying to internal equivalent '{}' for option type parsing", unwrapped_type, actual_type);
+            }
+
+            var is_enum = actual_type instanceof Class<?> c && c.isEnum();
+
+            SlashCommandOptionType option_type;
+            boolean uses_implementation_type;
+            if (is_enum) {
+                option_type = SlashCommandOptionType.INTEGER;
+                uses_implementation_type = false;
+            } else {
+                var final_actual_type = actual_type;
+                var inference = inferType(actual_type)
+                        .orElseThrow(() ->
+                                new ParsingException(
+                                        "Invalid parameter type '" + final_actual_type.getTypeName() + "', only types supported by the Discord Bridge api or " + bridge + " can be used",
+                                        "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")"));
+
+                logger.trace("inferred SlashCommandOptionType for {}, {}", actual_type, inference);
+
+                option_type = inference.type;
+                uses_implementation_type = inference.uses_implementation_type;
+            }
+
+            var option_name = option.name();
+            var option_description = option.description();
+
+            if (option_description.isEmpty()) {
+                logger.trace("description is blank, using name '{}' as description", option_name);
+                option_description = option_name;
+            }
+
+            var option_localizations = parseLocalizationData(parameter.getDeclaredAnnotationsByType(Trans.class),
+                    "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+
+            var option_required = !(parameter_type instanceof ParameterizedType pt && pt.getRawType().equals(Optional.class));
+            var option_string_choices = option.stringChoices();
+            var option_long_choices = option.longChoices();
+            var option_double_choices = option.doubleChoices();
+
+            OptionBoundsData bounds_data = null;
+
+            EnumSet<ChannelType> inferred_channel_bounds = null;
+            if (option_type == SlashCommandOptionType.CHANNEL) {
+                inferred_channel_bounds = inferChannelTypeBounds(unwrapped_type);
+                logger.trace("inferred channel type bounds for parameter type {}: {}", unwrapped_type, inferred_channel_bounds);
+
+                bounds_data = new ChannelTypeBoundsData(inferred_channel_bounds);
+            }
+
+            var channel_type_bounds = parameter.getDeclaredAnnotation(ChannelTypeBounds.class);
+            if (channel_type_bounds != null) {
+                logger.trace("found @ChannelTypeBounds on parameter");
+                if (option_type != SlashCommandOptionType.CHANNEL) {
+                    throw new ParsingException("ChannelTypeBounds can only be applied to Channel parameters", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                }
+
+                var channel_types_arr = channel_type_bounds.value();
+                var channel_types = EnumSet.noneOf(ChannelType.class);
+                for (var type : channel_types_arr) {
+                    var success = channel_types.add(type);
+                    if (!success) {
+                        logger.warn("""
+                                Duplicate Channel bound types found {} with parameter {}.{}({} {}) !!
+                                ignoring duplicate
+                                """, type, target.getName(), method.getName(), parameter.getType().getSimpleName(), parameter.getName());
+                    }
+                }
+
+                if (!inferred_channel_bounds.containsAll(channel_types)) {
+                    throw new ParsingException("@ChannelTypeBounds allows channel types that aren't assignable to the parameter type " + actual_type, "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                }
+
+                if (channel_types.isEmpty()) {
+                    throw new ParsingException("empty ChannelTypeBounds not allowed", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                }
+
+                bounds_data = new ChannelTypeBoundsData(channel_types);
+            }
+
+            var double_bounds = parameter.getDeclaredAnnotation(DoubleBounds.class);
+            if (double_bounds != null) {
+                logger.trace("found @DoubleBounds on parameter");
+                if (option_type != SlashCommandOptionType.NUMBER) {
+                    throw new ParsingException("@DoubleBounds can only be applied to double parameters", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                }
+
+                var min = double_bounds.min();
+                var max = double_bounds.max();
+
+                if (min > max) {
+                    throw new ParsingException("DoubleBounds min must be less than or equal to max", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                }
+
+                if ((min == BOUNDS_MIN || min == Double.NEGATIVE_INFINITY)
+                    && (max == BOUNDS_MAX || max == Double.POSITIVE_INFINITY)) {
+                    logger.warn("""
+                            DoubleBounds has no effect
+                                with parameter {}.{}({} {})
+                            """, target.getName(), method.getName(), parameter_type, parameter.getName());
+                } else if (min != Double.NEGATIVE_INFINITY && min < BOUNDS_MIN) {
+                    throw new ParsingException("DoubleBounds min must not be smaller than -2^53", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                } else if (max != Double.POSITIVE_INFINITY && max > BOUNDS_MAX) {
+                    throw new ParsingException("DoubleBounds max must not be greater than 2^53", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                }
+
+                bounds_data = new DoubleBoundsData(min, max);
+            }
+
+            var long_bounds = parameter.getDeclaredAnnotation(LongBounds.class);
+            if (long_bounds != null) {
+                logger.trace("found @LongBounds on parameter");
+                if (option_type != SlashCommandOptionType.INTEGER) {
+                    throw new ParsingException("@LongBounds can only be applied to long parameters", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                }
+
+                var min = long_bounds.min();
+                var max = long_bounds.max();
+
+                if (min > max) {
+                    throw new ParsingException("LongBounds min must be less than or equal to max", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                }
+
+                if ((min == BOUNDS_MIN || min == Long.MIN_VALUE)
+                    && (max == BOUNDS_MAX || max == Long.MAX_VALUE)) {
+                    logger.warn("""
+                            LongBounds has no effect
+                                with parameter {}.{}({} {})
+                            """, target.getName(), method.getName(), parameter_type, parameter.getName());
+                } else if (min != Long.MIN_VALUE && min < BOUNDS_MIN) {
+                    throw new ParsingException("LongBounds min must not be smaller than -2^53", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                } else if (max != Long.MAX_VALUE && max > BOUNDS_MAX) {
+                    throw new ParsingException("LongBounds max must not be greater than 2^53", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                }
+
+                bounds_data = new LongBoundsData(min, max);
+            }
+
+            var string_length_bounds = parameter.getDeclaredAnnotation(StringLengthBounds.class);
+            if (string_length_bounds != null) {
+                logger.trace("found @StringLengthBounds on parameter");
+                if (option_type != SlashCommandOptionType.STRING) {
+                    throw new ParsingException("@StringLengthBounds can only be applied to String parameters", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                }
+
+                var min = string_length_bounds.min();
+                var max = string_length_bounds.max();
+
+                if (min > max) {
+                    throw new ParsingException("StringLengthBounds min must be less than or equal to max", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                }
+
+                if (min < 0) {
+                    throw new ParsingException("StringLengthBounds min must not be negative", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                }
+
+                if (min == 0 && max == Long.MAX_VALUE) {
+                    logger.warn("""
+                            StringLengthBounds has no effect
+                                with parameter {}.{}({} {})
+                            """, target.getName(), method.getName(), parameter_type, parameter.getName());
+                }
+
+                bounds_data = new StringLengthBoundsData(min, max);
+            }
+
+            var autocomplete = parameter.getDeclaredAnnotation(Autocompletes.class);
+            if (autocomplete != null) {
+                parseAutocomplete(instance, target, method, parameter, option_type, actual_type, option_string_choices, option_long_choices, option_double_choices, autocomplete, parameter_type, options, option_name, option_description, option_localizations, option_required, uses_implementation_type, bounds_data);
+            } else if (option_string_choices.length > 0) {
+                logger.trace("found string choices on parameter");
+                var optionchoices = new ArrayList<SlashCommandOptionChoiceData<String>>();
+                if (option_type != SlashCommandOptionType.STRING) {
+                    throw new ParsingException("Option Choices type does not match parameter", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                }
+                if (bounds_data != null) {
+                    throw new ParsingException("Option Choices cannot be used when bounds are present", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                }
+                for (var choice : option_string_choices) {
+                    optionchoices.add(new SlashCommandOptionChoiceData<String>(
+                        choice.name().isEmpty()? choice.value() : choice.name(),
+                        choice.value(),
+                        parseOptionChoiceTranslations(choice.translations(), "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")")
+                    ));
+                }
+                options.add(new SlashCommandOptionData<String>(
+                    option_name,
+                    option_description,
+                    option_localizations,
+                    option_required,
+                    option_type,
+                    uses_implementation_type,
+                    null,
+                    optionchoices,
+                    null,
+                    null,
+                    null,
+                    false,
+                    false,
+                    false,
+                    null
+                ));
+
+            } else if (option_long_choices.length > 0) {
+                logger.trace("found long choices on parameter");
+                var optionchoices = new ArrayList<SlashCommandOptionChoiceData<Long>>();
+                if (option_type != SlashCommandOptionType.INTEGER) {
+                    throw new ParsingException("Invalid option choice type at parameter " + parameter.getName() + " in method " + method.getName(), "at class " + target.getName());
+                }
+                if (bounds_data != null) {
+                    throw new ParsingException("Option Choices cannot be used when bounds are present", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                }
+                for (var choice : option_long_choices) {
+                    optionchoices.add(new SlashCommandOptionChoiceData<Long>(
+                        choice.name(),
+                        choice.value(),
+                        parseOptionChoiceTranslations(choice.translations(), "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")")
+                    ));
+                }
+                options.add(new SlashCommandOptionData<Long>(
+                    option_name,
+                    option_description,
+                    option_localizations,
+                    option_required,
+                    option_type,
+                    uses_implementation_type,
+                    null,
+                    optionchoices,
+                    null,
+                    null,
+                    null,
+                    false,
+                    false,
+                    false,
+                    null
+                ));
+
+            } else if (option_double_choices.length > 0) {
+                logger.trace("found double choices on parameter");
+                var optionchoices = new ArrayList<SlashCommandOptionChoiceData<Double>>();
+                if (option_type != SlashCommandOptionType.NUMBER) {
+                    throw new ParsingException("Invalid option choice type at parameter " + parameter.getName() + " in method " + method.getName(), "at class " + target.getName());
+                }
+                if (bounds_data != null) {
+                    throw new ParsingException("Option Choices cannot be used when bounds are present", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                }
+                for (var choice : option_double_choices) {
+                    optionchoices.add(new SlashCommandOptionChoiceData<Double>(
+                            choice.name(),
+                            choice.value(),
+                            parseOptionChoiceTranslations(choice.translations(), "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")")
+                    ));
+                }
+                options.add(new SlashCommandOptionData<Double>(
+                        option_name,
+                        option_description,
+                        option_localizations,
+                        option_required,
+                        option_type,
+                        uses_implementation_type,
+                        null,
+                        optionchoices,
+                        null,
+                        null,
+                        null,
+                        false,
+                        false,
+                        false,
+                        null
+                ));
+
+            } else if (is_enum) {
+                logger.trace("parameter type is enum");
+                var inner_class = (Class<?>)actual_type;
+                var optionchoices = new ArrayList<SlashCommandOptionChoiceData<Enum<?>>>();
+                if (option_type != SlashCommandOptionType.INTEGER) {
+                    throw new ParsingException("Invalid option choice type at parameter " + parameter.getName() + " in method " + method.getName(), "at class " + target.getName());
+                }
+                if (long_bounds != null) {
+                    throw new ParsingException("Option Choices cannot be used when bounds are present", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+                }
+                if (CustomChoiceName.class.isAssignableFrom(inner_class)) {
+                    logger.trace("enum class implements CustomChoiceName");
+                    for (var choice : inner_class.getEnumConstants()) {
+                        logger.trace("adding option choice {}", choice);
+                        try {
+                            var choicename = custom_name_getter.invoke(choice).toString();
+                            logger.trace("returned custom name is {}", choicename);
+                            if (choicename.isBlank()) {
+                                throw new ParsingException("CustomChoiceName.getCustomName() must return a non-blank string", "at class " + target.getName());
+                            }
+                            if (choicename.length() > 25) {
+                                throw new ParsingException("CustomChoiceName.getCustomName() must return a string with a length of 25 characters or less", "at class " + target.getName());
+                            }
+                            var choice_localizations = Map.copyOf((Map<DiscordLocale, String>)custom_name_translations_getter.invoke(choice));
+                            optionchoices.add(new SlashCommandOptionChoiceData<Enum<?>>(choicename, ((Enum<?>)choice), choice_localizations));
+                        } catch (Throwable e) {
+                            throw new ParsingException("Exception while trying to get custom name", "at class " + target.getName(), e);
+                        }
+                    }
+                } else {
+                    logger.trace("enum class does not implement CustomChoiceName");
+                    for (var choice : inner_class.getEnumConstants()) {
+                        logger.trace("adding option choice {}", choice);
+                        optionchoices.add(new SlashCommandOptionChoiceData<Enum<?>>(choice.toString().replaceAll("(?<=.{25}).", ""), ((Enum<?>)choice), Map.of()));
+                    }
+                }
+                options.add(new SlashCommandOptionData<Enum<?>>(
+                    option_name,
+                    option_description,
+                    option_localizations,
+                    option_required,
+                    option_type,
+                    uses_implementation_type,
+                    null,
+                    optionchoices,
+                    null,
+                    null,
+                    null,
+                    false,
+                    false,
+                    true,
+                    null
+                ));
+
+            } else {
+                logger.trace("parameter is a simple option");
+                options.add(new SlashCommandOptionData<Long>(
+                    option_name,
+                    option_description,
+                    option_localizations,
+                    option_required,
+                    option_type,
+                    uses_implementation_type,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    false,
+                    false,
+                    false,
+                    bounds_data
+                ));
+            }
+        }
+    }
+
+    private void parseAutocomplete(Object instance, Class<?> target, Method method, Parameter parameter, SlashCommandOptionType option_type, Type actual_type, OptionChoiceString[] option_string_choices, OptionChoiceLong[] option_long_choices, OptionChoiceDouble[] option_double_choices, Autocompletes autocomplete, Type parameter_type, ArrayList<SlashCommandOptionData<?>> options, String option_name, String option_description, LocalizationData option_localizations, boolean option_required, boolean uses_implementation_type, OptionBoundsData bounds_data) {
+        logger.trace("found @Autocompletes on parameter");
+        if (!option_type.canBeChoices())
+            throw new ParsingException("Autocomplete can only be applied to String long or double", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+        var actual_class = (Class<?>) actual_type;
+
+        if (option_string_choices.length > 0 || option_long_choices.length > 0 || option_double_choices.length > 0)
+            throw new ParsingException("Autocomplete cannot be used with choices", "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
+        try {
+            var supplier_class = autocomplete.autocompleterClass();
+            if (supplier_class == Void.class) {
+                supplier_class = target;
+            }
+            var supplier_class_is_target = (supplier_class == target);
+            var supplier_method_name = autocomplete.autocompleter();
+
+            try {
+                logger.debug("attempting to resolve autocomplete supplier method for parameter {}.{}({} {})", target.getName(), method.getName(), parameter_type, parameter.getName());
+
+                var autocompleter = obtainAutocompleterMethod(supplier_class, supplier_method_name, actual_class);
+
+                var supplier_method = autocompleter.method();
+                var params = autocompleter.param();
+
+                validateAutocompleteSupplierMethod(supplier_method, actual_class);
+
+                var type = inferType(actual_class)
+                        .map(TypeInference::type) // ignore the internal type bc choices don't use any types that have an internal variant
+                        .filter((e) -> e.can_be_choices)
+                        .orElseThrow(() -> new ParsingException(
+                                "Invalid parameter type '" + actual_type.getTypeName() + "', only autocompletable types supported by the Discord Bridge api or " + bridge + " can be used",
+                                "with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")"));
+
+                AutocompleteFilter filter = null;
+
+                var search_suggestions = supplier_method.getDeclaredAnnotation(SearchSuggestions.class);
+                if (search_suggestions != null) {
+                    logger.trace("found SearchSuggestions in autocompleter method");
+
+                    filter = new AutocompleteFilterData(
+                        search_suggestions.at(),
+                        search_suggestions.containedIn(),
+                        search_suggestions.ignoreCase(),
+                        search_suggestions.ignoreWhitespace(),
+                        search_suggestions.ignorePunctuation(),
+                        search_suggestions.pruneToLimit(),
+                        search_suggestions.removeDuplicates(),
+                        search_suggestions.contiguous()
+                    );
+                }
+
+                AutocompletableData data;
+                if (supplier_class_is_target) {
+                    logger.trace("autocompleter method is in the same class as the command method, nonstatic methods are allowed");
+                    if (Modifier.isStatic(supplier_method.getModifiers())) {
+                        data = new AutocompletableData(supplier_method, null, type, params, filter);
+                    } else {
+                        data = new AutocompletableData(supplier_method, instance, type, params, filter);
+                    }
+                } else {
+                    logger.trace("autocompleter method is not in the same class as the command method, autocompleter method must be static");
+                    if (!Modifier.isStatic(supplier_method.getModifiers())) {
+                        throw new ParsingException("Autocomplete supplier method must be static if not in the same class", "in method " + supplier_class.getName() + "." + supplier_method_name + "(" + actual_class.getSimpleName() + ")");
+                    }
+                    data = new AutocompletableData(supplier_method, null, type, params, filter);
+                }
+
+                supplier_method.setAccessible(true);
+
+                options.add(new SlashCommandOptionData<String>(
+                        option_name,
+                        option_description,
+                        option_localizations,
+                        option_required,
+                        option_type,
+                        uses_implementation_type,
+                    null,
+                    null,
+                    data,
+                    null,
+                    null,
+                    false,
+                    false,
+                    false,
+                        bounds_data
+                ));
+
+
+            } catch (NoSuchMethodException | SecurityException e) {
+                throw new ParsingException("Autocompleter method not found, an Autocompleter method can only take the parameters (" + actual_class.getSimpleName() + ") or (AutocompleteInteraction, " + actual_class.getSimpleName() + ")", "at class " + supplier_class.getName(), e);
+            } catch (ParsingException e) {
+                throw e.addParseTrace("at class " + supplier_class.getName());
+            }
+        } catch (ParsingException e) {
+            throw e.addParseTrace("with parameter " + target.getName() + "." + method.getName() + "(" + parameter.getType().getSimpleName() + " " + parameter.getName() + ")");
         }
     }
 
