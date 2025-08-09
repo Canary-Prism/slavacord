@@ -2,10 +2,7 @@ package canaryprism.slavacord.annotations.processor;
 
 import canaryprism.discordbridge.api.data.interaction.slash.SlashCommandData;
 import canaryprism.slavacord.Commands;
-import canaryprism.slavacord.annotations.Command;
-import canaryprism.slavacord.annotations.CommandGroup;
-import canaryprism.slavacord.annotations.Interaction;
-import canaryprism.slavacord.annotations.Option;
+import canaryprism.slavacord.annotations.*;
 
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedSourceVersion;
@@ -110,13 +107,21 @@ public final class CommandAnnotationProcessor extends AbstractProcessor {
         }
 
 
-        if (executable.getEnclosingElement() instanceof TypeElement type
-                && type.getAnnotation(CommandGroup.class) == null
-                && !type.getInterfaces().contains(getTypeMirror(Commands.class))) {
-            message(Diagnostic.Kind.ERROR,
-                    "method with @%s not nested in %s class or command group"
-                            .formatted(Command.class.getSimpleName(), Commands.class.getSimpleName())
-                    , executable, annotation_mirror);
+        if (executable.getEnclosingElement() instanceof TypeElement type) {
+            if (type.getAnnotation(CommandGroup.class) == null) {
+                if (type.getInterfaces().contains(getTypeMirror(Commands.class))) {
+                    if (type.getAnnotation(CreateGlobal.class) == null && type.getAnnotation(CreateServer.class) == null)
+                        message(Diagnostic.Kind.ERROR,
+                                "%s type must be annotated with @%s or @%s"
+                                        .formatted(Commands.class.getSimpleName(), CreateGlobal.class.getSimpleName(), CreateServer.class.getSimpleName()),
+                                type);
+                } else {
+                    message(Diagnostic.Kind.ERROR,
+                            "method with @%s not nested in %s class or command group"
+                                    .formatted(Command.class.getSimpleName(), Commands.class.getSimpleName())
+                            , executable, annotation_mirror);
+                }
+            }
         }
     }
 }
