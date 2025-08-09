@@ -11,6 +11,7 @@ import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.*;
+import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
 import java.util.*;
@@ -182,7 +183,7 @@ public final class AutocompletesAnnotationProcessor extends AbstractProcessor {
                         types.getDeclaredType(
                                 elements.getTypeElement(AutocompleteSuggestion.class.getName()),
                                 types.getWildcardType(
-                                        type, null)), null));
+                                        (type instanceof PrimitiveType primitive) ? types.boxedClass(primitive).asType() : type, null)), null));
 
         return types.isAssignable(executable.getReturnType(), list_of_autocomplete_suggestion_of_type);
     }
