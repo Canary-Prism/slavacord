@@ -162,7 +162,7 @@ public final class AutocompletesAnnotationProcessor extends AbstractProcessor {
         var parameters = new HashSet<AutocompleterParameter>();
 
         for (var parameter : executable.getParameters()) {
-            if (type.equals(parameter.asType())) {
+            if (types.isAssignable(parameter.asType(), type) && types.isAssignable(type, parameter.asType())) {
                 if (!parameters.add(AutocompleterParameter.VALUE))
                     return false;
             } else if (autocomplete_interaction_types.contains(parameter.asType())) {
