@@ -5,7 +5,6 @@ module canaryprism.slavacord.processor {
     requires java.compiler;
     requires canaryprism.slavacord;
     requires canaryprism.discordbridge.api;
-    requires org.apache.commons.lang3;
 
     provides javax.annotation.processing.Processor with
             CreateAnnotationProcessor,
@@ -15,5 +14,6 @@ module canaryprism.slavacord.processor {
             OptionAnnotationProcessor,
             AutocompletesAnnotationProcessor,
             AutocompleterAnnotationProcessor,
-            CommandGroupAnnotationProcessor;
+            CommandGroupAnnotationProcessor,
+            OptionBoundAnnotationProcessor;
 }
