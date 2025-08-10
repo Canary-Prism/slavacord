@@ -1,5 +1,6 @@
 package canaryprism.slavacord.annotations.processor;
 
+import canaryprism.discordbridge.api.data.interaction.slash.SlashCommandData;
 import canaryprism.slavacord.Commands;
 import canaryprism.slavacord.annotations.Command;
 import canaryprism.slavacord.annotations.CommandGroup;
@@ -33,6 +34,41 @@ public final class CommandGroupAnnotationProcessor extends AbstractProcessor {
                 message(Diagnostic.Kind.ERROR, "no-args constructor required for @%s containing nonstatic commands"
                         .formatted(CommandGroup.class.getSimpleName()), type, annotation_mirror);
             }
+        }
+
+        var name_element = ((ExecutableElement) annotation.getEnclosedElements()
+                .stream()
+                .filter((e) -> e.getSimpleName().contentEquals("name"))
+                .findAny()
+                .orElseThrow());
+        var description_element = ((ExecutableElement) annotation.getEnclosedElements()
+                .stream()
+                .filter((e) -> e.getSimpleName().contentEquals("description"))
+                .findAny()
+                .orElseThrow());
+
+        var defined_values = annotation_mirror.getElementValues();
+
+        var command_group = type.getAnnotation(CommandGroup.class);
+
+        var data = new SlashCommandData("data", "data");
+
+        try {
+            data.setName(command_group.name());
+        } catch (IllegalArgumentException e) {
+            message(Diagnostic.Kind.ERROR,
+                    "invalid command name '%s', command names must be between 1 and %s characters long, and match the pattern /%s/ "
+                            .formatted(command_group.name(), SlashCommandData.MAX_NAME_LENGTH, SlashCommandData.NAME_PATTERN),
+                    type, annotation_mirror, defined_values.get(name_element));
+        }
+
+        try {
+            data.setDescription(command_group.description());
+        } catch (IllegalArgumentException e) {
+            message(Diagnostic.Kind.ERROR,
+                    "invalid command description '%s', command descriptions must be between 1 and %s characters long"
+                            .formatted(command_group.description(), SlashCommandData.MAX_DESCRIPTION_LENGTH),
+                    type, annotation_mirror, defined_values.get(description_element));
         }
 
         var depth = 0;
