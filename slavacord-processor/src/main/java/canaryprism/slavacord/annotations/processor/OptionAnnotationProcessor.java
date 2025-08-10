@@ -37,7 +37,6 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
         }
 
         var optional_type = bridge((bridge) -> inferType(bridge, parameter.asType()))
-                .stream()
                 .flatMap(Optional::stream)
                 .findAny();
 

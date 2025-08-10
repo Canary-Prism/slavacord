@@ -19,9 +19,12 @@ import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.WildcardType;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Optional;
+import java.util.ServiceLoader;
+import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public abstract class AbstractProcessor extends javax.annotation.processing.AbstractProcessor {
 
@@ -36,21 +39,20 @@ public abstract class AbstractProcessor extends javax.annotation.processing.Abst
         this.types = processingEnv.getTypeUtils();
     }
 
-    protected <T> Set<? extends T> bridge(Function<? super DiscordBridge, ? extends T> function) {
+    protected <T> Stream<? extends T> bridge(Function<? super DiscordBridge, ? extends T> function) {
 
         class Holder {
             static final ServiceLoader<DiscordBridge> loader = ServiceLoader.load(DiscordBridge.class, DiscordBridge.class.getClassLoader());
         }
         return Holder.loader
                 .stream()
-                .<T>mapMulti((e, downstream) -> {
+                .mapMulti((e, downstream) -> {
                     try {
                         downstream.accept(function.apply(e.get()));
                     } catch (Throwable n) {
                         // nothing ig?
                     }
-                })
-                .collect(Collectors.toUnmodifiableSet());
+                });
     }
 
     @Override

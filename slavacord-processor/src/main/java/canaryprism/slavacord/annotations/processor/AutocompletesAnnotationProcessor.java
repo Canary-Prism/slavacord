@@ -153,7 +153,6 @@ public final class AutocompletesAnnotationProcessor extends AbstractProcessor {
 
         var autocomplete_interaction_types = Stream.concat(
                         bridge((e) -> e.getImplementationType(SlashCommandAutocompleteInteraction.class))
-                                .stream()
                                 .flatMap(Optional::stream),
                         Stream.of(SlashCommandAutocompleteInteraction.class))
                 .map(this::getTypeMirror)

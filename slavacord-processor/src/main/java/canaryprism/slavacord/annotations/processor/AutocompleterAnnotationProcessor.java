@@ -52,7 +52,6 @@ public final class AutocompleterAnnotationProcessor extends AbstractProcessor {
 
         var autocomplete_interaction_types = Stream.concat(
                         bridge((e) -> e.getImplementationType(SlashCommandAutocompleteInteraction.class))
-                                .stream()
                                 .flatMap(Optional::stream),
                         Stream.of(SlashCommandAutocompleteInteraction.class))
                 .map(this::getTypeMirror)
@@ -85,7 +84,6 @@ public final class AutocompleterAnnotationProcessor extends AbstractProcessor {
                                         && e != SlashCommandOptionType.SUBCOMMAND
                                         && e != SlashCommandOptionType.SUBCOMMAND_GROUP)
                                 .map(bridge::getInternalTypeRepresentation))
-                                .stream()
                                 .flatMap(Function.identity()))
                 .map(this::getTypeMirror)
                 .filter((e) -> validateAutocompleterReturnType(executable, e))
