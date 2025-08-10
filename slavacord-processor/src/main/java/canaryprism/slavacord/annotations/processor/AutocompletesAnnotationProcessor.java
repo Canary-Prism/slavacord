@@ -16,7 +16,6 @@ import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @SupportedAnnotationTypes({
@@ -151,10 +150,8 @@ public final class AutocompletesAnnotationProcessor extends AbstractProcessor {
             INTERACTION, VALUE
         }
 
-        var autocomplete_interaction_types = Stream.concat(
-                        bridge((e) -> e.getImplementationType(SlashCommandAutocompleteInteraction.class))
-                                .flatMap(Optional::stream),
-                        Stream.of(SlashCommandAutocompleteInteraction.class))
+        var autocomplete_interaction_types = bridge((e) -> e.getImplementationType(SlashCommandAutocompleteInteraction.class))
+                .flatMap(Optional::stream)
                 .map(this::getTypeMirror)
                 .collect(Collectors.toSet());
 

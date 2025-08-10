@@ -19,6 +19,7 @@ slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
 
 javacord = { module = "org.javacord:javacord", version.ref = "javacord" }
 discord-bridge = { module = "io.github.canary-prism:discord-bridge", version.ref = "discord-bridge" }
+discord-bridge-identity = { module = "io.github.canary-prism:discord-bridge-identity", version.ref = "discord-bridge" }
 
 apache-commons-lang = { module = "org.apache.commons:commons-lang3", version.ref = "apache-commons-lang" }
 

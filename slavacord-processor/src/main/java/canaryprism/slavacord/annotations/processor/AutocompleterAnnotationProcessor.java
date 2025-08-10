@@ -8,7 +8,10 @@ import canaryprism.slavacord.autocomplete.annotations.Autocompleter;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
-import javax.lang.model.element.*;
+import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
@@ -18,7 +21,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @SupportedAnnotationTypes({
@@ -50,10 +52,8 @@ public final class AutocompleterAnnotationProcessor extends AbstractProcessor {
             INTERACTION, VALUE
         }
 
-        var autocomplete_interaction_types = Stream.concat(
-                        bridge((e) -> e.getImplementationType(SlashCommandAutocompleteInteraction.class))
-                                .flatMap(Optional::stream),
-                        Stream.of(SlashCommandAutocompleteInteraction.class))
+        var autocomplete_interaction_types = bridge((e) -> e.getImplementationType(SlashCommandAutocompleteInteraction.class))
+                .flatMap(Optional::stream)
                 .map(this::getTypeMirror)
                 .collect(Collectors.toSet());
 
@@ -74,17 +74,12 @@ public final class AutocompleterAnnotationProcessor extends AbstractProcessor {
     }
 
     private Optional<TypeMirror> getAutocompleterReturnType(ExecutableElement executable) {
-        return Stream.concat(Arrays.stream(SlashCommandOptionType.values())
-                                .filter((e) -> e != SlashCommandOptionType.UNKNOWN
-                                        && e != SlashCommandOptionType.SUBCOMMAND
-                                        && e != SlashCommandOptionType.SUBCOMMAND_GROUP)
-                                .map(SlashCommandOptionType::getTypeRepresentation),
-                        bridge((bridge) -> Arrays.stream(SlashCommandOptionType.values())
-                                .filter((e) -> e != SlashCommandOptionType.UNKNOWN
-                                        && e != SlashCommandOptionType.SUBCOMMAND
-                                        && e != SlashCommandOptionType.SUBCOMMAND_GROUP)
-                                .map(bridge::getInternalTypeRepresentation))
-                                .flatMap(Function.identity()))
+        return bridge((bridge) -> Arrays.stream(SlashCommandOptionType.values())
+                .filter((e) -> e != SlashCommandOptionType.UNKNOWN
+                        && e != SlashCommandOptionType.SUBCOMMAND
+                        && e != SlashCommandOptionType.SUBCOMMAND_GROUP)
+                .map(bridge::getInternalTypeRepresentation))
+                .flatMap(Function.identity())
                 .map(this::getTypeMirror)
                 .filter((e) -> validateAutocompleterReturnType(executable, e))
                 .findAny();

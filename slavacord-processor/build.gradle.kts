@@ -11,6 +11,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter")
 
     implementation(libs.discord.bridge)
+    runtimeOnly(libs.discord.bridge.identity)
     implementation(project(":"))
 
     implementation(libs.apache.commons.lang)
