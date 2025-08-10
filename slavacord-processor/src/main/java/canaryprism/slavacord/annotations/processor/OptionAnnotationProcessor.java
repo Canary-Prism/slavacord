@@ -1,11 +1,16 @@
 package canaryprism.slavacord.annotations.processor;
 
 import canaryprism.discordbridge.api.DiscordBridge;
+import canaryprism.discordbridge.api.channel.ChannelType;
 import canaryprism.discordbridge.api.data.interaction.slash.SlashCommandData;
 import canaryprism.discordbridge.api.data.interaction.slash.SlashCommandOptionData;
 import canaryprism.discordbridge.api.interaction.slash.SlashCommandOptionType;
 import canaryprism.slavacord.annotations.Command;
 import canaryprism.slavacord.annotations.Option;
+import canaryprism.slavacord.annotations.optionbounds.ChannelTypeBounds;
+import canaryprism.slavacord.annotations.optionbounds.DoubleBounds;
+import canaryprism.slavacord.annotations.optionbounds.LongBounds;
+import canaryprism.slavacord.annotations.optionbounds.StringLengthBounds;
 import canaryprism.slavacord.autocomplete.annotations.Autocompletes;
 
 import javax.annotation.processing.SupportedAnnotationTypes;
@@ -16,7 +21,10 @@ import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static canaryprism.discordbridge.api.interaction.slash.SlashCommandOption.*;
 
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @SupportedAnnotationTypes({
@@ -129,6 +137,56 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
                 }
             }
 
+
+            if (((Object) parameter.getAnnotationMirrors()
+                    .stream()
+                    .filter((e) -> e.getAnnotationType().equals(getTypeMirror(ChannelTypeBounds.class)))
+                    .findAny()
+                    .orElse(null)) instanceof AnnotationMirror mirror) {
+                if (type == SlashCommandOptionType.CHANNEL)
+                    validateChannelTypeBounds(parameter, mirror, parameter.asType());
+                else
+                    message(Diagnostic.Kind.ERROR, "@%s not allowed for option type %s"
+                                    .formatted(ChannelTypeBounds.class.getSimpleName(), type),
+                            parameter, mirror);
+            }
+            if (((Object) parameter.getAnnotationMirrors()
+                    .stream()
+                    .filter((e) -> e.getAnnotationType().equals(getTypeMirror(DoubleBounds.class)))
+                    .findAny()
+                    .orElse(null)) instanceof AnnotationMirror mirror) {
+                if (type == SlashCommandOptionType.NUMBER)
+                    validateDoubleBounds(parameter, mirror);
+                else
+                    message(Diagnostic.Kind.ERROR, "@%s not allowed for option type %s"
+                                    .formatted(DoubleBounds.class.getSimpleName(), type),
+                            parameter, mirror);
+            }
+            if (((Object) parameter.getAnnotationMirrors()
+                    .stream()
+                    .filter((e) -> e.getAnnotationType().equals(getTypeMirror(LongBounds.class)))
+                    .findAny()
+                    .orElse(null)) instanceof AnnotationMirror mirror) {
+                if (type == SlashCommandOptionType.INTEGER)
+                    validateLongBounds(parameter, mirror);
+                else
+                    message(Diagnostic.Kind.ERROR, "@%s not allowed for option type %s"
+                                    .formatted(LongBounds.class.getSimpleName(), type),
+                            parameter, mirror);
+            }
+            if (((Object) parameter.getAnnotationMirrors()
+                    .stream()
+                    .filter((e) -> e.getAnnotationType().equals(getTypeMirror(StringLengthBounds.class)))
+                    .findAny()
+                    .orElse(null)) instanceof AnnotationMirror mirror) {
+                if (type == SlashCommandOptionType.STRING)
+                    validateStringLengthBounds(parameter, mirror);
+                else
+                    message(Diagnostic.Kind.ERROR, "@%s not allowed for option type %s"
+                                    .formatted(StringLengthBounds.class.getSimpleName(), type),
+                            parameter, mirror);
+            }
+
             var data = new SlashCommandOptionData("test", "test", type);
 
             try {
@@ -174,6 +232,43 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
                 message(Diagnostic.Kind.ERROR, "doubleChoices not allowed for enum options", parameter, annotation_mirror, value);
             if (((Object) defined_values.get(stringChoices_element)) instanceof AnnotationValue value)
                 message(Diagnostic.Kind.ERROR, "stringChoices not allowed for enum options", parameter, annotation_mirror, value);
+
+            if (((Object) parameter.getAnnotationMirrors()
+                    .stream()
+                    .filter((e) -> e.getAnnotationType().equals(getTypeMirror(ChannelTypeBounds.class)))
+                    .findAny()
+                    .orElse(null)) instanceof AnnotationMirror mirror) {
+                message(Diagnostic.Kind.ERROR, "@%s not allowed for enum options"
+                                .formatted(ChannelTypeBounds.class.getSimpleName()),
+                        parameter, mirror);
+            }
+            if (((Object) parameter.getAnnotationMirrors()
+                    .stream()
+                    .filter((e) -> e.getAnnotationType().equals(getTypeMirror(DoubleBounds.class)))
+                    .findAny()
+                    .orElse(null)) instanceof AnnotationMirror mirror) {
+                message(Diagnostic.Kind.ERROR, "@%s not allowed for enum options"
+                                .formatted(DoubleBounds.class.getSimpleName()),
+                        parameter, mirror);
+            }
+            if (((Object) parameter.getAnnotationMirrors()
+                    .stream()
+                    .filter((e) -> e.getAnnotationType().equals(getTypeMirror(LongBounds.class)))
+                    .findAny()
+                    .orElse(null)) instanceof AnnotationMirror mirror) {
+                message(Diagnostic.Kind.ERROR, "@%s not allowed for enum options"
+                                .formatted(LongBounds.class.getSimpleName()),
+                        parameter, mirror);
+            }
+            if (((Object) parameter.getAnnotationMirrors()
+                    .stream()
+                    .filter((e) -> e.getAnnotationType().equals(getTypeMirror(StringLengthBounds.class)))
+                    .findAny()
+                    .orElse(null)) instanceof AnnotationMirror mirror) {
+                message(Diagnostic.Kind.ERROR, "@%s not allowed for enum options"
+                                .formatted(StringLengthBounds.class.getSimpleName()),
+                        parameter, mirror);
+            }
 
             if (((Object) parameter.getAnnotationMirrors()
                     .stream()
@@ -237,5 +332,224 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
                                 .filter((e) -> e.getTypeRepresentation()
                                         .isAssignableFrom(option_type.getTypeRepresentation()))
                                 .count()));
+    }
+
+    /// the only real requirement is that everything specified in [ChannelTypeBounds#value()] is assignable to the passed type
+    /// oh also it can't be empty
+    private void validateChannelTypeBounds(VariableElement parameter, AnnotationMirror annotation_mirror, TypeMirror type) {
+
+        var value_element = ((ExecutableElement) annotation_mirror.getAnnotationType()
+                .asElement()
+                .getEnclosedElements()
+                .stream()
+                .filter((e) -> e.getSimpleName().contentEquals("value"))
+                .findAny()
+                .orElseThrow());
+
+        var value = annotation_mirror.getElementValues()
+                .get(value_element);
+
+        var types = new HashSet<ChannelType>();
+
+        for (var e : parameter.getAnnotation(ChannelTypeBounds.class).value()) {
+            if (!types.add(e)) {
+                message(Diagnostic.Kind.WARNING, "duplicate %s in @%s"
+                                .formatted(ChannelType.class.getSimpleName(), ChannelTypeBounds.class.getSimpleName()),
+                        parameter, annotation_mirror, value);
+            }
+        }
+
+        if (types.isEmpty()) {
+            message(Diagnostic.Kind.ERROR, "empty @%s not allowed"
+                            .formatted(ChannelTypeBounds.class.getSimpleName()),
+                    parameter, annotation_mirror, value);
+            return;
+        }
+
+        var bridges = bridge(Function.identity())
+                .filter((bridge) -> this.types.isAssignable(
+                        type,
+                        getTypeMirror(bridge.getInternalTypeRepresentation(SlashCommandOptionType.CHANNEL))))
+                .collect(Collectors.toSet());
+
+        // holy shit what is this line of code
+        var unassignable = types.stream()
+                .filter((e) -> bridges.stream()
+                        .map(e::getInternalTypeRepresentation)
+                        .map(this::getTypeMirror)
+                        .noneMatch((mirror) -> this.types.isAssignable(mirror, type)))
+                .collect(Collectors.toSet());
+        if (!unassignable.isEmpty()) {
+            message(Diagnostic.Kind.ERROR, "%ss %s not assignable to %s"
+                            .formatted(SlashCommandOptionType.class.getSimpleName(), unassignable, type),
+                    parameter, annotation_mirror, value);
+        }
+    }
+
+    private void validateDoubleBounds(VariableElement parameter, AnnotationMirror annotation_mirror) {
+
+        var bounds = parameter.getAnnotation(DoubleBounds.class);
+
+        var min_value = ((ExecutableElement) annotation_mirror.getAnnotationType()
+                .asElement()
+                .getEnclosedElements()
+                .stream()
+                .filter((e) -> e.getSimpleName().contentEquals("min"))
+                .findAny()
+                .orElseThrow());
+        var max_value = ((ExecutableElement) annotation_mirror.getAnnotationType()
+                .asElement()
+                .getEnclosedElements()
+                .stream()
+                .filter((e) -> e.getSimpleName().contentEquals("max"))
+                .findAny()
+                .orElseThrow());
+
+        var defined_values = annotation_mirror.getElementValues();
+
+        var used = false;
+
+        var min = Double.NEGATIVE_INFINITY;
+        var max = Double.POSITIVE_INFINITY;
+
+        if (((Object) defined_values.get(min_value)) instanceof AnnotationValue value) {
+            used = true;
+            min = bounds.min();
+
+            if (!(MIN_NUMBER <= min && min <= MAX_NUMBER))
+                message(Diagnostic.Kind.ERROR, "%s values must be between %s and %s"
+                                .formatted(SlashCommandOptionType.NUMBER, MIN_NUMBER, MAX_NUMBER),
+                        parameter, annotation_mirror, value);
+        }
+        if (((Object) defined_values.get(max_value)) instanceof AnnotationValue value) {
+            used = true;
+            max = bounds.max();
+
+            if (!(MIN_NUMBER <= max && max <= MAX_NUMBER))
+                message(Diagnostic.Kind.ERROR, "%s values must be between %s and %s"
+                                .formatted(SlashCommandOptionType.NUMBER, MIN_NUMBER, MAX_NUMBER),
+                        parameter, annotation_mirror, value);
+        }
+
+        if (min > max)
+            message(Diagnostic.Kind.ERROR, "min value %s greater than max value %s"
+                            .formatted(min, max),
+                    parameter, annotation_mirror);
+
+        if (!used)
+            message(Diagnostic.Kind.WARNING, "redundant @%s, neither min nor max value specified"
+                            .formatted(DoubleBounds.class.getSimpleName()),
+                    parameter, annotation_mirror);
+    }
+
+    private void validateLongBounds(VariableElement parameter, AnnotationMirror annotation_mirror) {
+
+        var bounds = parameter.getAnnotation(LongBounds.class);
+
+        var min_value = ((ExecutableElement) annotation_mirror.getAnnotationType()
+                .asElement()
+                .getEnclosedElements()
+                .stream()
+                .filter((e) -> e.getSimpleName().contentEquals("min"))
+                .findAny()
+                .orElseThrow());
+        var max_value = ((ExecutableElement) annotation_mirror.getAnnotationType()
+                .asElement()
+                .getEnclosedElements()
+                .stream()
+                .filter((e) -> e.getSimpleName().contentEquals("max"))
+                .findAny()
+                .orElseThrow());
+
+        var defined_values = annotation_mirror.getElementValues();
+
+        var used = false;
+
+        var min = Long.MIN_VALUE;
+        var max = Long.MAX_VALUE;
+
+        if (((Object) defined_values.get(min_value)) instanceof AnnotationValue value) {
+            used = true;
+            min = bounds.min();
+
+            if (!(MIN_NUMBER <= min && min <= MAX_NUMBER))
+                message(Diagnostic.Kind.ERROR, "%s values must be between %s and %s"
+                                .formatted(SlashCommandOptionType.INTEGER, MIN_NUMBER, MAX_NUMBER),
+                        parameter, annotation_mirror, value);
+        }
+        if (((Object) defined_values.get(max_value)) instanceof AnnotationValue value) {
+            used = true;
+            max = bounds.max();
+
+            if (!(MIN_NUMBER <= max && max <= MAX_NUMBER))
+                message(Diagnostic.Kind.ERROR, "%s values must be between %s and %s"
+                                .formatted(SlashCommandOptionType.INTEGER, MIN_NUMBER, MAX_NUMBER),
+                        parameter, annotation_mirror, value);
+        }
+
+        if (min > max)
+            message(Diagnostic.Kind.ERROR, "min value %s greater than max value %s"
+                            .formatted(min, max),
+                    parameter, annotation_mirror);
+
+        if (!used)
+            message(Diagnostic.Kind.WARNING, "redundant @%s, neither min nor max value specified"
+                            .formatted(LongBounds.class.getSimpleName()),
+                    parameter, annotation_mirror);
+    }
+    private void validateStringLengthBounds(VariableElement parameter, AnnotationMirror annotation_mirror) {
+
+        var bounds = parameter.getAnnotation(StringLengthBounds.class);
+
+        var min_value = ((ExecutableElement) annotation_mirror.getAnnotationType()
+                .asElement()
+                .getEnclosedElements()
+                .stream()
+                .filter((e) -> e.getSimpleName().contentEquals("min"))
+                .findAny()
+                .orElseThrow());
+        var max_value = ((ExecutableElement) annotation_mirror.getAnnotationType()
+                .asElement()
+                .getEnclosedElements()
+                .stream()
+                .filter((e) -> e.getSimpleName().contentEquals("max"))
+                .findAny()
+                .orElseThrow());
+
+        var defined_values = annotation_mirror.getElementValues();
+
+        var used = false;
+
+        var min = 0L;
+        var max = Long.MAX_VALUE;
+
+        if (((Object) defined_values.get(min_value)) instanceof AnnotationValue value) {
+            used = true;
+            min = bounds.min();
+
+            if (!(0 <= min && min <= MAX_STRING_LENGTH))
+                message(Diagnostic.Kind.ERROR, "%s length must be between %s and %s"
+                                .formatted(SlashCommandOptionType.STRING, 0, MAX_STRING_LENGTH),
+                        parameter, annotation_mirror, value);
+        }
+        if (((Object) defined_values.get(max_value)) instanceof AnnotationValue value) {
+            used = true;
+            max = bounds.max();
+
+            if (!(0 <= max && max <= MAX_STRING_LENGTH))
+                message(Diagnostic.Kind.ERROR, "%s length must be between %s and %s"
+                                .formatted(SlashCommandOptionType.STRING, 0, MAX_STRING_LENGTH),
+                        parameter, annotation_mirror, value);
+        }
+
+        if (min > max)
+            message(Diagnostic.Kind.ERROR, "min value %s greater than max value %s"
+                            .formatted(min, max),
+                    parameter, annotation_mirror);
+
+        if (!used)
+            message(Diagnostic.Kind.WARNING, "redundant @%s, neither min nor max value specified"
+                            .formatted(StringLengthBounds.class.getSimpleName()),
+                    parameter, annotation_mirror);
     }
 }
