@@ -138,11 +138,17 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
             }
 
 
+            var has_bounds = false;
             if (((Object) parameter.getAnnotationMirrors()
                     .stream()
                     .filter((e) -> e.getAnnotationType().equals(getTypeMirror(ChannelTypeBounds.class)))
                     .findAny()
                     .orElse(null)) instanceof AnnotationMirror mirror) {
+                has_bounds = true;
+                if (has_choices)
+                    message(Diagnostic.Kind.ERROR, "@%s cannot be present when @%s has choices defined"
+                                    .formatted(ChannelTypeBounds.class.getSimpleName(), Option.class.getSimpleName()),
+                            parameter, mirror);
                 if (type == SlashCommandOptionType.CHANNEL)
                     validateChannelTypeBounds(parameter, mirror, parameter.asType());
                 else
@@ -155,6 +161,11 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
                     .filter((e) -> e.getAnnotationType().equals(getTypeMirror(DoubleBounds.class)))
                     .findAny()
                     .orElse(null)) instanceof AnnotationMirror mirror) {
+                has_bounds = true;
+                if (has_choices)
+                    message(Diagnostic.Kind.ERROR, "@%s cannot be present when @%s has choices defined"
+                                    .formatted(DoubleBounds.class.getSimpleName(), Option.class.getSimpleName()),
+                            parameter, mirror);
                 if (type == SlashCommandOptionType.NUMBER)
                     validateDoubleBounds(parameter, mirror);
                 else
@@ -167,6 +178,11 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
                     .filter((e) -> e.getAnnotationType().equals(getTypeMirror(LongBounds.class)))
                     .findAny()
                     .orElse(null)) instanceof AnnotationMirror mirror) {
+                has_bounds = true;
+                if (has_choices)
+                    message(Diagnostic.Kind.ERROR, "@%s cannot be present when @%s has choices defined"
+                                    .formatted(LongBounds.class.getSimpleName(), Option.class.getSimpleName()),
+                            parameter, mirror);
                 if (type == SlashCommandOptionType.INTEGER)
                     validateLongBounds(parameter, mirror);
                 else
@@ -179,6 +195,11 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
                     .filter((e) -> e.getAnnotationType().equals(getTypeMirror(StringLengthBounds.class)))
                     .findAny()
                     .orElse(null)) instanceof AnnotationMirror mirror) {
+                has_bounds = true;
+                if (has_choices)
+                    message(Diagnostic.Kind.ERROR, "@%s cannot be present when @%s has choices defined"
+                                    .formatted(StringLengthBounds.class.getSimpleName(), Option.class.getSimpleName()),
+                            parameter, mirror);
                 if (type == SlashCommandOptionType.STRING)
                     validateStringLengthBounds(parameter, mirror);
                 else
@@ -216,6 +237,11 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
                     message(Diagnostic.Kind.ERROR, "@%s cannot be present when @%s has choices defined"
                                     .formatted(Autocompletes.class.getSimpleName(), Option.class.getSimpleName()),
                             parameter, autocompletes_mirror);
+                if (has_bounds)
+                    message(Diagnostic.Kind.ERROR, "@%s cannot be present when @%s has option bounds defined"
+                                    .formatted(Autocompletes.class.getSimpleName(), Option.class.getSimpleName()),
+                            parameter, autocompletes_mirror);
+
                 if (!type.canBeChoices())
                     message(Diagnostic.Kind.ERROR, "@%s not allowed for type %s"
                                     .formatted(Autocompletes.class.getSimpleName(), type),
