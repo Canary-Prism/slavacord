@@ -31,9 +31,9 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
             return;
         }
 
-        if (parameter.getEnclosingElement() instanceof ExecutableElement executable && executable.getAnnotation(Command.class) != null) {
+        if (parameter.getEnclosingElement() instanceof ExecutableElement executable && executable.getAnnotation(Command.class) == null) {
             message(Diagnostic.Kind.ERROR, "method with @%s parameters must have @%s"
-                    .formatted(Option.class.getSimpleName(), Command.class), executable);
+                    .formatted(Option.class.getSimpleName(), Command.class.getSimpleName()), executable);
         }
 
         var optional_type = bridge((bridge) -> inferType(bridge, parameter.asType()))
