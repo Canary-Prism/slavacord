@@ -103,6 +103,13 @@ public final class CommandGroupAnnotationProcessor extends AbstractProcessor {
             message(Diagnostic.Kind.ERROR, "@%s type must be nested in another type"
                     .formatted(CommandGroup.class.getSimpleName()), type, annotation_mirror);
         }
+
+        if (type.getEnclosedElements()
+                .stream()
+                .noneMatch((e) -> e.getAnnotation(CommandGroup.class) != null || e.getAnnotation(Command.class) != null))
+            message(Diagnostic.Kind.ERROR, "@%s type must contain @%s methods or @%s types"
+                            .formatted(CommandGroup.class.getSimpleName(), Command.class.getSimpleName(), CommandGroup.class.getSimpleName()),
+                    type, annotation_mirror);
     }
 
     private boolean hasNonstaticCommandMethod(TypeElement type) {
