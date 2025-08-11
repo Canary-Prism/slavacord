@@ -5,6 +5,7 @@ import canaryprism.discordbridge.api.channel.ChannelType;
 import canaryprism.discordbridge.api.data.interaction.slash.SlashCommandData;
 import canaryprism.discordbridge.api.data.interaction.slash.SlashCommandOptionData;
 import canaryprism.discordbridge.api.interaction.slash.SlashCommandOptionType;
+import canaryprism.slavacord.CustomChoiceName;
 import canaryprism.slavacord.annotations.Command;
 import canaryprism.slavacord.annotations.Option;
 import canaryprism.slavacord.annotations.optionbounds.ChannelTypeBounds;
@@ -247,10 +248,13 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
                                     .formatted(Autocompletes.class.getSimpleName(), type),
                             parameter, autocompletes_mirror);
             }
-        } else if (types.isAssignable(parameter.asType(), types.erasure(getTypeMirror(Enum.class)))) {
+        } else if (types.isAssignable(parameter.asType(), types.erasure(getTypeMirror(Enum.class)))
+                && !types.isSameType(types.erasure(parameter.asType()), types.erasure(getTypeMirror(Enum.class)))) {
 
             message(Diagnostic.Kind.NOTE, "inferred type is enum", parameter);
             // checks for enums :3
+
+            validateEnumOption(parameter, annotation_mirror, (TypeElement) types.asElement(parameter.asType()));
 
             if (((Object) defined_values.get(longChoices_element)) instanceof AnnotationValue value)
                 message(Diagnostic.Kind.ERROR, "longChoices not allowed for enum options", parameter, annotation_mirror, value);
@@ -577,5 +581,42 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
             message(Diagnostic.Kind.WARNING, "redundant @%s, neither min nor max value specified"
                             .formatted(StringLengthBounds.class.getSimpleName()),
                     parameter, annotation_mirror);
+    }
+
+    private void validateEnumOption(VariableElement parameter, AnnotationMirror annotation_mirror, TypeElement type) {
+        if (type.getEnclosedElements().stream().noneMatch((e) -> e.getKind() == ElementKind.ENUM_CONSTANT))
+            message(Diagnostic.Kind.ERROR, "enum %s has no values".formatted(type.getQualifiedName()), parameter, annotation_mirror);
+        if (!types.isAssignable(type.asType(), getTypeMirror(CustomChoiceName.class))) {
+            // automatic option choices from declaration name
+            // check if names are unique after trimming to 25 characters
+
+            var name_map = new HashMap<String, Set<String>>();
+
+            for (var e : type.getEnclosedElements())
+                if (e instanceof VariableElement element && element.getKind() == ElementKind.ENUM_CONSTANT) {
+                    var name = element.getSimpleName().toString();
+                    var short_name = name.substring(0, Math.min(25, name.length()));
+                    name_map.computeIfAbsent(short_name, (key) -> new HashSet<>())
+                            .add(name);
+                }
+
+            if (name_map.values().stream().anyMatch((e) -> e.size() > 1)) {
+                var repeats = name_map.entrySet()
+                        .stream()
+                        .filter((e) -> e.getValue().size() > 1)
+                        .map((e) -> "values [%s] trim to %s"
+                                .formatted(e.getValue()
+                                                .stream()
+                                                .map("'%s'"::formatted)
+                                                .collect(Collectors.joining(", ")),
+                                        e.getKey()))
+                        .collect(Collectors.joining(", "));
+
+                message(Diagnostic.Kind.ERROR,
+                        "enum %s contains values that contain duplicate names after truncating to 25 characters, %s; rename the values or implement %s to override this behaviour"
+                                .formatted(type.getQualifiedName(), repeats, CustomChoiceName.class.getName()),
+                        parameter, annotation_mirror);
+            }
+        }
     }
 }
