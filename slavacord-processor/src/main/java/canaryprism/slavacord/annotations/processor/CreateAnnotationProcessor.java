@@ -1,6 +1,8 @@
 package canaryprism.slavacord.annotations.processor;
 
 import canaryprism.slavacord.Commands;
+import canaryprism.slavacord.annotations.Command;
+import canaryprism.slavacord.annotations.CommandGroup;
 import canaryprism.slavacord.annotations.CreateGlobal;
 
 import javax.annotation.processing.SupportedAnnotationTypes;
@@ -27,6 +29,13 @@ public final class CreateAnnotationProcessor extends AbstractProcessor {
                             .formatted(annotation.getSimpleName()), e, annotation_mirror);
             return;
         }
+
+        if (type.getEnclosedElements()
+                .stream()
+                .noneMatch((element) -> element.getAnnotation(CommandGroup.class) != null || e.getAnnotation(Command.class) != null))
+            message(Diagnostic.Kind.WARNING, "%s type has no @%s methods or @%s types"
+                            .formatted(Commands.class.getSimpleName(), Command.class.getSimpleName(), CommandGroup.class.getSimpleName()),
+                    type, annotation_mirror);
 
         if (type.getInterfaces()
                 .stream()
