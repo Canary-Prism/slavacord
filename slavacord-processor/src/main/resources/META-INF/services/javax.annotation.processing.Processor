@@ -7,3 +7,4 @@ canaryprism.slavacord.annotations.processor.AutocompletesAnnotationProcessor
 canaryprism.slavacord.annotations.processor.AutocompleterAnnotationProcessor
 canaryprism.slavacord.annotations.processor.CommandGroupAnnotationProcessor
 canaryprism.slavacord.annotations.processor.OptionBoundAnnotationProcessor
+canaryprism.slavacord.annotations.processor.TranslationsAnnotationProcessor
