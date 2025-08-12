@@ -61,7 +61,7 @@ public abstract class AbstractProcessor extends javax.annotation.processing.Abst
             for (var e : roundEnv.getElementsAnnotatedWith(annotation)) {
                 var optional_annotation_mirror = e.getAnnotationMirrors()
                         .stream()
-                        .filter((mirror) -> mirror.getAnnotationType().equals(annotation.asType()))
+                        .filter((mirror) -> types.isSameType(mirror.getAnnotationType(), annotation.asType()))
                         .findAny();
                 if (((Object) optional_annotation_mirror.orElse(null)) instanceof AnnotationMirror annotation_mirror)
                     try {
