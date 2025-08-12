@@ -59,18 +59,18 @@ public abstract class AbstractProcessor extends javax.annotation.processing.Abst
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         for (var annotation : annotations) {
             for (var e : roundEnv.getElementsAnnotatedWith(annotation)) {
-                var annotation_mirror = e.getAnnotationMirrors()
+                var optional_annotation_mirror = e.getAnnotationMirrors()
                         .stream()
                         .filter((mirror) -> mirror.getAnnotationType().equals(annotation.asType()))
-                        .findAny()
-                        .orElseThrow();
-                try {
-                    process(annotation, e, annotation_mirror);
-                } catch (Exception n) {
-                    var writer = new StringWriter();
-                    n.printStackTrace(new PrintWriter(writer));
-                    message(Diagnostic.Kind.ERROR, writer.toString(), e);
-                }
+                        .findAny();
+                if (((Object) optional_annotation_mirror.orElse(null)) instanceof AnnotationMirror annotation_mirror)
+                    try {
+                        process(annotation, e, annotation_mirror);
+                    } catch (Exception n) {
+                        var writer = new StringWriter();
+                        n.printStackTrace(new PrintWriter(writer));
+                        message(Diagnostic.Kind.ERROR, writer.toString(), e);
+                    }
             }
         }
         return true;
