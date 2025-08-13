@@ -412,7 +412,7 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
                 .collect(Collectors.toSet());
         if (!unassignable.isEmpty()) {
             message(Diagnostic.Kind.ERROR, "%ss %s not assignable to %s"
-                            .formatted(SlashCommandOptionType.class.getSimpleName(), unassignable, type),
+                            .formatted(ChannelType.class.getSimpleName(), unassignable, type),
                     parameter, annotation_mirror, value);
         }
     }
