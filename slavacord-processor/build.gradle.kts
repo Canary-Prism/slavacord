@@ -14,6 +14,13 @@ dependencies {
     runtimeOnly(libs.discord.bridge.identity)
     implementation(project(":"))
 
+    runtimeOnly(libs.discord4j)
+    runtimeOnly(libs.javacord)
+    runtimeOnly(libs.jda)
+    runtimeOnly(libs.kord)
+
+
+
     implementation(libs.apache.commons.lang)
 }
 
