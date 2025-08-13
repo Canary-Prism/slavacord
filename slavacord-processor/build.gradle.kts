@@ -2,6 +2,8 @@ plugins {
     `java-library`
 }
 
+description = "annotation processor for slavacord"
+
 repositories {
     mavenCentral()
 }
