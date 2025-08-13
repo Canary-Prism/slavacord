@@ -310,7 +310,8 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
                         parameter, autocompletes_mirror);
             }
         } else {
-            message(Diagnostic.Kind.ERROR, "can't infer SlashCommandOptionType %s %s", parameter, annotation_mirror);
+            message(Diagnostic.Kind.ERROR, "can't infer SlashCommandOptionType for type %s"
+                    .formatted(parameter.asType()), parameter, annotation_mirror);
         }
 
     }
