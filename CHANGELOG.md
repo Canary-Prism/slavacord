@@ -1,5 +1,9 @@
 # Changelog
 
+## v8.1.0
+- added `slavacord-processor` annotation processor
+- added support for autocompleted `double` options
+
 ## v8.0.1
 - made `@ReturnsResponse` respondLater responders tolerate throwing when attempting to set EPHEMERAL flag
 - upgraded discord-bridge version to 7.0.1
