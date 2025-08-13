@@ -40,6 +40,19 @@ layer to translate from `discord-bridge-api` to the api wrapper you're using mus
 here is a [list of implementations Discord Bridge provides](https://github.com/Canary-Prism/discord-bridge#implementations), if the api you're using is on that list it should work out of the box, if not you need to add a dependency that provides the implementation for the api you're using  
 if you want to exclude the implmentations you don't need you can do so with the same syntax as [for Discord Bridge](https://github.com/Canary-Prism/discord-bridge#adding-as-dependency-and-whatever)
 
+## Annotation Processor
+
+this library comes with an optional annotation processor `slavacord-processor`
+
+it doesn't do any codegen it just checks that all annotations are being used properly at compile time, 
+it is meant to be slightly more strict than `CommandHandler`'s checks simply because more information is available at this time
+
+if you are using a discord-bridge implementation not part of the defaults that come with discord-bridge then you must also 
+add the discord-bridge implementation as well as the api you're using as annotation processor dependencies
+
+this is due to how annotation processors do *not* get run with all implementation dependencies available to it in classpath, 
+you need to add the libraries as annotation processor dependencies even if they aren't just so that `slavacord-processor` can interact with them
+
 ## How use
 
 This library uses Discord Bridge, so any discord library you use should work as long as an implementation in Discord Bridge is present
