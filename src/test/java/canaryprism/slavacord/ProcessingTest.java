@@ -1,20 +1,43 @@
 package canaryprism.slavacord;
 
-import canaryprism.slavacord.annotations.Command;
-import canaryprism.slavacord.annotations.CreateGlobal;
-import canaryprism.slavacord.annotations.Option;
+import canaryprism.discordbridge.api.misc.DiscordLocale;
+import canaryprism.slavacord.annotations.*;
 import canaryprism.slavacord.autocomplete.AutocompleteSuggestion;
 import canaryprism.slavacord.autocomplete.annotations.Autocompleter;
-import canaryprism.slavacord.autocomplete.annotations.Autocompletes;
 
 import java.util.List;
 
-@CreateGlobal(contexts = {})
+@CreateGlobal
 public class ProcessingTest implements Commands {
 
+    @Trans(locale = DiscordLocale.JAPANESE)
+    @Trans(locale = DiscordLocale.JAPANESE)
     @Command(name = "mrrp", description = "nya")
-    private void mrrp(@Autocompletes(autocompleter = "mrr") @Option(name = "mrrp") String e) {
+    private void mrrp(@Option(name = "mrr") Mewo e) {
+        @CommandGroup(name = "mrrr")
+        class Mrrr {
 
+        }
+    }
+
+    enum Mewo {
+
+    }
+
+    @CommandGroup(name = "mrow")
+    class Meep {
+
+    }
+    @CommandGroup(name = "e")
+    class Mrow {
+
+        @CommandGroup(name = "r")
+        class Mrrp {
+            @Command(name = "mrr", description = "nya")
+            private void mrrp(Mrrp this) {
+                System.out.println(this);
+            }
+        }
     }
 
     @Autocompleter
