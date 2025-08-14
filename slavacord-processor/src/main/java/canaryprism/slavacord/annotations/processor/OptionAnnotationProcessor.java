@@ -330,31 +330,22 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
 
         var final_type = type;
 
-        return inferDiscordBridgeType(types, type)
-                .or(() -> inferImplementationType(bridge, types, final_type));
+        return inferImplementationType(bridge, types, final_type);
     }
 
-    @SuppressWarnings("unchecked")
-    private Optional<SlashCommandOptionType> inferDiscordBridgeType(Set<? extends SlashCommandOptionType> types, TypeMirror type) {
-        var compatible = types.stream()
-                .filter((e) -> this.types.isAssignable(type,
-                        getTypeMirror(e.getTypeRepresentation())))
-                .collect(Collectors.toSet());
-
-        return (Optional<SlashCommandOptionType>) compatible.stream()
-                .max(Comparator.comparing((option_type) ->
-                        compatible.stream()
-                                .filter((e) -> e.getTypeRepresentation()
-                                        .isAssignableFrom(option_type.getTypeRepresentation()))
-                                .count()));
-    }
 
 
     @SuppressWarnings("unchecked")
     private Optional<SlashCommandOptionType> inferImplementationType(DiscordBridge bridge, Set<? extends SlashCommandOptionType> types, TypeMirror type) {
         var compatible = types.stream()
-                .filter((e) -> this.types.isAssignable(type,
-                        getTypeMirror(e.getInternalTypeRepresentation(bridge))))
+                .filter((e) -> {
+                    try {
+                        return this.types.isAssignable(type,
+                                getTypeMirror(e.getInternalTypeRepresentation(bridge)));
+                    } catch (Exception ex) {
+                        return false;
+                    }
+                })
                 .collect(Collectors.toSet());
 
         return (Optional<SlashCommandOptionType>) compatible.stream()
