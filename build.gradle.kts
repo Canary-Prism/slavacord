@@ -6,7 +6,7 @@ plugins {
 group = "io.github.canary-prism"
 description = "A library addon for Discord Bridge that adds a more convenient syntax for creating slash commands."
 
-val root = project;
+val root = project
 
 allprojects {
 
@@ -14,7 +14,7 @@ allprojects {
     plugins.apply("com.vanniktech.maven.publish")
 
     group = "io.github.canary-prism"
-    version = "8.1.0"
+    version = "8.1.1"
 
     mavenPublishing {
         publishToMavenCentral(true)
