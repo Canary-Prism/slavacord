@@ -4,10 +4,7 @@ import canaryprism.discordbridge.api.DiscordBridge;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
-import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.AnnotationValue;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.*;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
@@ -78,7 +75,10 @@ public abstract class AbstractProcessor extends javax.annotation.processing.Abst
 
     protected TypeMirror getTypeMirror(Type type) {
         if (type instanceof Class<?> clazz) {
-            return elements.getTypeElement(clazz.getName()).asType();
+            if (((Object) elements.getModuleElement(Optional.ofNullable(clazz.getModule().getName()).orElse(""))) instanceof ModuleElement module)
+                return elements.getTypeElement(module, clazz.getName()).asType();
+            else
+                return elements.getTypeElement(clazz.getName()).asType();
         } else if (type instanceof ParameterizedType parameterized) {
             DeclaredType containing = null;
             if (((Object) parameterized.getOwnerType()) instanceof Type owner) {
