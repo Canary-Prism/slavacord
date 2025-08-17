@@ -239,10 +239,6 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
                     message(Diagnostic.Kind.ERROR, "@%s cannot be present when @%s has choices defined"
                                     .formatted(Autocompletes.class.getSimpleName(), Option.class.getSimpleName()),
                             parameter, autocompletes_mirror);
-                if (has_bounds)
-                    message(Diagnostic.Kind.ERROR, "@%s cannot be present when @%s has option bounds defined"
-                                    .formatted(Autocompletes.class.getSimpleName(), Option.class.getSimpleName()),
-                            parameter, autocompletes_mirror);
 
                 if (!type.canBeChoices())
                     message(Diagnostic.Kind.ERROR, "@%s not allowed for type %s"
