@@ -18,6 +18,7 @@ import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.*;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
@@ -314,6 +315,13 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
                     .formatted(parameter.asType()), parameter, annotation_mirror);
         }
 
+    }
+
+    private TypeMirror unwrapOptional(TypeMirror mirror) {
+        if (mirror instanceof DeclaredType type && types.isSameType(type, getTypeMirror(Optional.class))) {
+            return type.getTypeArguments().get(0);
+        }
+        return mirror;
     }
 
     private Optional<SlashCommandOptionType> inferType(DiscordBridge bridge, TypeMirror type) {
