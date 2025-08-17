@@ -76,7 +76,9 @@ public abstract class AbstractProcessor extends javax.annotation.processing.Abst
     protected TypeMirror getTypeMirror(Type type) {
         if (type instanceof Class<?> clazz) {
             if (((Object) elements.getModuleElement(Optional.ofNullable(clazz.getModule().getName()).orElse(""))) instanceof ModuleElement module)
-                return elements.getTypeElement(module, clazz.getName()).asType();
+                return Optional.ofNullable(elements.getTypeElement(module, clazz.getName()))
+                        .orElse(elements.getTypeElement(module, clazz.getCanonicalName()))
+                        .asType();
             else
                 return elements.getTypeElement(clazz.getName()).asType();
         } else if (type instanceof ParameterizedType parameterized) {
