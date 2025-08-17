@@ -308,13 +308,13 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
             }
         } else {
             message(Diagnostic.Kind.ERROR, "can't infer SlashCommandOptionType for type %s"
-                    .formatted(parameter.asType()), parameter, annotation_mirror);
+                    .formatted(unwrapOptional(parameter.asType())), parameter, annotation_mirror);
         }
 
     }
 
     private TypeMirror unwrapOptional(TypeMirror mirror) {
-        if (mirror instanceof DeclaredType type && types.isSameType(type, getTypeMirror(Optional.class))) {
+        if (mirror instanceof DeclaredType type && types.isSameType(types.erasure(type), types.erasure(getTypeMirror(Optional.class)))) {
             return type.getTypeArguments().get(0);
         }
         return mirror;
