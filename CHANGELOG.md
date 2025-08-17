@@ -1,5 +1,11 @@
 # Changelog
 
+## v8.1.2
+- fix inference properly
+
+## v8.1.1
+- fix inference slightly (but still not enough)
+
 ## v8.1.0
 - added `slavacord-processor` annotation processor
 - added support for autocompleted `double` options
