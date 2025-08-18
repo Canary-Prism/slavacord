@@ -123,4 +123,11 @@ public abstract class AbstractProcessor extends javax.annotation.processing.Abst
         processingEnv.getMessager()
                 .printMessage(kind, message, element, annotation_mirror, annotation_value);
     }
+
+    protected TypeMirror unwrapOptional(TypeMirror mirror) {
+        if (mirror instanceof DeclaredType type && types.isSameType(types.erasure(type), types.erasure(getTypeMirror(Optional.class)))) {
+            return type.getTypeArguments().get(0);
+        }
+        return mirror;
+    }
 }
