@@ -1,5 +1,8 @@
 # Changelog
 
+## v8.1.3
+- fix @Autocompletes validation so it works for Optional parameters
+
 ## v8.1.2
 - fix inference properly
 

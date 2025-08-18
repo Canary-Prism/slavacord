@@ -14,7 +14,7 @@ allprojects {
     plugins.apply("com.vanniktech.maven.publish")
 
     group = "io.github.canary-prism"
-    version = "8.1.2"
+    version = "8.1.3"
 
     mavenPublishing {
         publishToMavenCentral(true)
