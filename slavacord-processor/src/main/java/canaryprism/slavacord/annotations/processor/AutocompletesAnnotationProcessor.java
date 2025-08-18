@@ -57,7 +57,7 @@ public final class AutocompletesAnnotationProcessor extends AbstractProcessor {
 
         var autocompleter_value = annotation_mirror.getElementValues().get(autocompleter_element);
 
-        var type = parameter.asType();
+        var type = unwrapOptional(parameter.asType());
 
         // okay this is really annoying because morally i *have* to put some effort of inferring what could possibly have been intended
 
