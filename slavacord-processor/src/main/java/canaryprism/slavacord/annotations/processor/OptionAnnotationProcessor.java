@@ -46,7 +46,9 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
                     .formatted(Option.class.getSimpleName(), Command.class.getSimpleName()), executable);
         }
 
-        var optional_type = bridge((bridge) -> inferType(bridge, unwrapOptional(parameter.asType())))
+        var actual_type = unwrapOptional(parameter.asType());
+
+        var optional_type = bridge((bridge) -> inferType(bridge, actual_type))
                 .flatMap(Optional::stream)
                 .findAny();
 
@@ -140,19 +142,17 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
             }
 
 
-            var has_bounds = false;
             if (((Object) parameter.getAnnotationMirrors()
                     .stream()
                     .filter((e) -> e.getAnnotationType().equals(getTypeMirror(ChannelTypeBounds.class)))
                     .findAny()
                     .orElse(null)) instanceof AnnotationMirror mirror) {
-                has_bounds = true;
                 if (has_choices)
                     message(Diagnostic.Kind.ERROR, "@%s cannot be present when @%s has choices defined"
                                     .formatted(ChannelTypeBounds.class.getSimpleName(), Option.class.getSimpleName()),
                             parameter, mirror);
                 if (type == SlashCommandOptionType.CHANNEL)
-                    validateChannelTypeBounds(parameter, mirror, parameter.asType());
+                    validateChannelTypeBounds(parameter, mirror, actual_type);
                 else
                     message(Diagnostic.Kind.ERROR, "@%s not allowed for option type %s"
                                     .formatted(ChannelTypeBounds.class.getSimpleName(), type),
@@ -163,7 +163,6 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
                     .filter((e) -> e.getAnnotationType().equals(getTypeMirror(DoubleBounds.class)))
                     .findAny()
                     .orElse(null)) instanceof AnnotationMirror mirror) {
-                has_bounds = true;
                 if (has_choices)
                     message(Diagnostic.Kind.ERROR, "@%s cannot be present when @%s has choices defined"
                                     .formatted(DoubleBounds.class.getSimpleName(), Option.class.getSimpleName()),
@@ -180,7 +179,6 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
                     .filter((e) -> e.getAnnotationType().equals(getTypeMirror(LongBounds.class)))
                     .findAny()
                     .orElse(null)) instanceof AnnotationMirror mirror) {
-                has_bounds = true;
                 if (has_choices)
                     message(Diagnostic.Kind.ERROR, "@%s cannot be present when @%s has choices defined"
                                     .formatted(LongBounds.class.getSimpleName(), Option.class.getSimpleName()),
@@ -197,7 +195,6 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
                     .filter((e) -> e.getAnnotationType().equals(getTypeMirror(StringLengthBounds.class)))
                     .findAny()
                     .orElse(null)) instanceof AnnotationMirror mirror) {
-                has_bounds = true;
                 if (has_choices)
                     message(Diagnostic.Kind.ERROR, "@%s cannot be present when @%s has choices defined"
                                     .formatted(StringLengthBounds.class.getSimpleName(), Option.class.getSimpleName()),
@@ -245,13 +242,13 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
                                     .formatted(Autocompletes.class.getSimpleName(), type),
                             parameter, autocompletes_mirror);
             }
-        } else if (types.isAssignable(parameter.asType(), types.erasure(getTypeMirror(Enum.class)))
-                && !types.isSameType(types.erasure(parameter.asType()), types.erasure(getTypeMirror(Enum.class)))) {
+        } else if (types.isAssignable(actual_type, types.erasure(getTypeMirror(Enum.class)))
+                && !types.isSameType(types.erasure(actual_type), types.erasure(getTypeMirror(Enum.class)))) {
 
             message(Diagnostic.Kind.NOTE, "inferred type is enum", parameter);
             // checks for enums :3
 
-            validateEnumOption(parameter, annotation_mirror, (TypeElement) types.asElement(parameter.asType()));
+            validateEnumOption(parameter, annotation_mirror, (TypeElement) types.asElement(actual_type));
 
             if (((Object) defined_values.get(longChoices_element)) instanceof AnnotationValue value)
                 message(Diagnostic.Kind.ERROR, "longChoices not allowed for enum options", parameter, annotation_mirror, value);
@@ -308,7 +305,7 @@ public final class OptionAnnotationProcessor extends AbstractProcessor {
             }
         } else {
             message(Diagnostic.Kind.ERROR, "can't infer SlashCommandOptionType for type %s"
-                    .formatted(unwrapOptional(parameter.asType())), parameter, annotation_mirror);
+                    .formatted(actual_type), parameter, annotation_mirror);
         }
 
     }
